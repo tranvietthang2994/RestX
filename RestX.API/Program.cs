@@ -5,16 +5,10 @@ using QRCoder;
 using RestX.API.Data.Contexts;
 using RestX.API.Data.Repository.Implementations;
 using RestX.API.Data.Repository.Interfaces;
+using RestX.API.Extensions;
 using RestX.API.Hubs;
-
-//using RestX.WebApp.Filters;
-//using RestX.WebApp.Helper;
-//using RestX.WebApp.Hubs;
-//using RestX.WebApp.Models;
-//using RestX.WebApp.Services;
-//using RestX.WebApp.Services.Interfaces;
-//using RestX.WebApp.Services.Services;
-//using RestX.WebApp.Services.SignalRLab;
+using RestX.API.Services.Implementations;
+using RestX.API.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,41 +20,43 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
-
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 builder.Services.AddHttpContextAccessor();
-//builder.Services.AddControllersWithViews(options =>
-//{
-//    options.Filters.Add<RestaurantContextFilterAttribute>();
-//});
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add<RestaurantContextFilterAttribute>();
+});
 builder.Services.AddSignalR();
 
 builder.Services.AddScoped<IRepository, EntityFrameworkRepository<RestXRestaurantManagementContext>>();
 builder.Services.AddScoped<IReadOnlyRepository, EntityFrameworkReadOnlyRepository<RestXRestaurantManagementContext>>();
-//builder.Services.AddScoped<IAuthCustomerService, AuthCustomerService>();
-//builder.Services.AddScoped<IExceptionHandler, ExceptionHandler>();
-//builder.Services.AddScoped<ICustomerService, CustomerService>();
-//builder.Services.AddScoped<IOwnerService, OwnerService>();
-//builder.Services.AddScoped<IDishService, DishService>();
-//builder.Services.AddScoped<IHomeService, HomeService>();
-//builder.Services.AddScoped<ITableService, TableService>();
-//builder.Services.AddScoped<IMenuService, MenuService>();
-//builder.Services.AddScoped<ICategoryService, CategoryService>();
-//builder.Services.AddScoped<ICartService, CartService>();
-//builder.Services.AddScoped<IOrderService, OrderService>();
-//builder.Services.AddScoped<ILoginService, LoginService>();
-//builder.Services.AddScoped<IStaffService, StaffService>();
-//builder.Services.AddScoped<IStaffManagementService, StaffManagementService>();
-//builder.Services.AddScoped<IOrderDetailService, OrderDetailService>();
-//builder.Services.AddScoped<IIngredientImportService, IngredientImportService>();
-//builder.Services.AddScoped<IDashboardService, DashboardService>();
-//builder.Services.AddScoped<IDishManagementService, DishManagementService>();
-//builder.Services.AddScoped<IFileService, FileService>();
-//builder.Services.AddScoped<ICustomerService, CustomerService>();
-//builder.Services.AddScoped<QRCodeGenerator>();
-//builder.Services.AddScoped<IAiService, AiService>();
-//builder.Services.AddHttpClient<IAiService, AiService>();
+builder.Services.AddScoped<IAuthCustomerService, AuthCustomerService>();
+builder.Services.AddScoped<IExceptionHandler, ExceptionHandler>();
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<IOwnerService, OwnerService>();
+builder.Services.AddScoped<IDishService, DishService>();
+builder.Services.AddScoped<IHomeService, HomeService>();
+builder.Services.AddScoped<ITableService, TableService>();
+builder.Services.AddScoped<IMenuService, MenuService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<ILoginService, LoginService>();
+builder.Services.AddScoped<IStaffService, StaffService>();
+builder.Services.AddScoped<IStaffManagementService, StaffManagementService>();
+builder.Services.AddScoped<IOrderDetailService, OrderDetailService>();
+builder.Services.AddScoped<IIngredientImportService, IngredientImportService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IDishManagementService, DishManagementService>();
+builder.Services.AddScoped<IFileService, FileService>();
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<QRCodeGenerator>();
+builder.Services.AddScoped<IAiService, AiService>();
+builder.Services.AddHttpClient<IAiService, AiService>();
 
-//builder.Services.AddAutoMapper(typeof(Program));
+builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddDbContext<RestXRestaurantManagementContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("RestX"),
@@ -93,7 +89,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     options.ExpireTimeSpan = TimeSpan.FromDays(1);
 });
 
-//builder.Services.AddAutoMapper(typeof(Program));
+builder.Services.AddAutoMapper(typeof(Program));
 
 // File upload configuration
 builder.Services.Configure<FormOptions>(options =>
@@ -115,7 +111,6 @@ builder.Services.AddDbContext<RestXRestaurantManagementContext>(options =>
                 errorNumbersToAdd: null);
         });
 
-    // Enable sensitive data logging in development
     if (builder.Environment.IsDevelopment())
     {
         options.EnableSensitiveDataLogging();
@@ -124,23 +119,23 @@ builder.Services.AddDbContext<RestXRestaurantManagementContext>(options =>
 });
 // Buld port 5000
 //builder.WebHost.UseUrls("https://0.0.0.0:5000");
-// Keep the old DbContext for compatibility during migration
 builder.Services.AddDbContext<RestXRestaurantManagementContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("RestX"));
 });
 
 var app = builder.Build();
+app.UseSwagger();
+app.UseSwaggerUI();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
-//UserHelper.HttpContextAccessor = app.Services.GetRequiredService<IHttpContextAccessor>();
+UserHelper.HttpContextAccessor = app.Services.GetRequiredService<IHttpContextAccessor>();
 
 app.UseStaticFiles();
 app.UseRouting();
@@ -152,16 +147,16 @@ app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.Use(async (context, next) =>
-{
-    if (context.Request.Path == "/")
-    {
+//app.Use(async (context, next) =>
+//{
+//    if (context.Request.Path == "/")
+//    {
 
-        context.Response.Redirect("/Home/Index/550E8400-E29B-41D4-A716-446655440040/1");
-        return;
-    }
-    await next();
-});
+//        context.Response.Redirect("/Home/Index/550E8400-E29B-41D4-A716-446655440040/1");
+//        return;
+//    }
+//    await next();
+//});
 
 app.MapControllerRoute(
     name: "home_with_params",
@@ -177,7 +172,7 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{ownerId?}/{tableId?}");
 
-//app.MapHub<SignalrServer>("/signalrServer");
+app.MapHub<SignalrServer>("/signalrServer");
 app.MapHub<TableStatusHub>("/tableStatusHub");
 
 app.Run();
