@@ -32,7 +32,7 @@ namespace RestX.API.Services.Implementations
             return new DishesManagementViewModel
             {
                 Dishes = mapper.Map<List<DishViewModel>>(dishes),
-                Categories = categories
+                Categories = mapper.Map<List<RestX.API.Models.DTOs.Response.CategoryDto>>(categories)
             };
         }
     }

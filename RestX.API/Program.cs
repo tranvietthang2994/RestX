@@ -5,28 +5,42 @@ using QRCoder;
 using RestX.API.Data.Contexts;
 using RestX.API.Data.Repository.Implementations;
 using RestX.API.Data.Repository.Interfaces;
-using RestX.API.Extensions;
 using RestX.API.Hubs;
 using RestX.API.Services.Implementations;
 using RestX.API.Services.Interfaces;
+using RestX.API.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// API Controllers Configuration với JSON cycle handling
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Fix JSON serialization cycles
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.WriteIndented = true; // For better readability in development
+    });
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo 
+    { 
+        Title = "RestX API", 
+        Version = "v1",
+        Description = "Restaurant Management System API"
+    });
+});
+
+// HTTP Context
+builder.Services.AddHttpContextAccessor();
+
+// Session (if needed for API)
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
-
     options.IdleTimeout = TimeSpan.FromMinutes(60);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
-});
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddControllersWithViews(options =>
-{
-    options.Filters.Add<RestaurantContextFilterAttribute>();
 });
 builder.Services.AddSignalR();
 
@@ -56,7 +70,7 @@ builder.Services.AddScoped<QRCodeGenerator>();
 builder.Services.AddScoped<IAiService, AiService>();
 builder.Services.AddHttpClient<IAiService, AiService>();
 
-builder.Services.AddAutoMapper(typeof(Program));
+// Database Configuration
 builder.Services.AddDbContext<RestXRestaurantManagementContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("RestX"),
@@ -75,21 +89,16 @@ builder.Services.AddDbContext<RestXRestaurantManagementContext>(options =>
     }
 });
 
-// Build port 5000
-//builder.WebHost.UseUrls("http://0.0.0.0:5000");
-// Keep the old DbContext for compatibility during migration
-builder.Services.AddDbContext<RestXRestaurantManagementContext>(options =>
-{
-    options.UseSqlServer(builder.Configuration.GetConnectionString("RestX"));
-});
+// AutoMapper
+builder.Services.AddAutoMapper(typeof(Program));
+
+// Authentication (JWT for API - will be configured later)
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
 .AddCookie(options =>
 {
-    options.LoginPath = "/Login";
+    options.LoginPath = "/api/auth/login";
     options.ExpireTimeSpan = TimeSpan.FromDays(1);
 });
-
-builder.Services.AddAutoMapper(typeof(Program));
 
 // File upload configuration
 builder.Services.Configure<FormOptions>(options =>
@@ -99,80 +108,57 @@ builder.Services.Configure<FormOptions>(options =>
     options.MultipartHeadersLengthLimit = int.MaxValue;
 });
 
-// Configure the new Code First DbContext
-builder.Services.AddDbContext<RestXRestaurantManagementContext>(options =>
+// CORS Configuration for API
+builder.Services.AddCors(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("RestX"),
-        sqlOptions =>
-        {
-            sqlOptions.EnableRetryOnFailure(
-                maxRetryCount: 5,
-                maxRetryDelay: TimeSpan.FromDays(1),
-                errorNumbersToAdd: null);
-        });
-
-    if (builder.Environment.IsDevelopment())
+    options.AddPolicy("AllowAll", policy =>
     {
-        options.EnableSensitiveDataLogging();
-        options.EnableDetailedErrors();
-    }
-});
-// Buld port 5000
-//builder.WebHost.UseUrls("https://0.0.0.0:5000");
-builder.Services.AddDbContext<RestXRestaurantManagementContext>(options =>
-{
-    options.UseSqlServer(builder.Configuration.GetConnectionString("RestX"));
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
 });
 
 var app = builder.Build();
-app.UseSwagger();
-app.UseSwaggerUI();
 
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+// Configure Swagger for Development and Production
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseExceptionHandler("/Home/Error");
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "RestX API v1");
+    c.RoutePrefix = string.Empty; // Make Swagger UI available at root
+});
+
+// Configure HTTP pipeline for API
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/api/error");
     app.UseHsts();
 }
 
+// Set up UserHelper for API
 UserHelper.HttpContextAccessor = app.Services.GetRequiredService<IHttpContextAccessor>();
 
-app.UseStaticFiles();
-app.UseRouting();
-app.UseForwardedHeaders();
+// Middleware pipeline
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+app.UseCors("AllowAll");
 app.UseRouting();
 app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
-//app.Use(async (context, next) =>
-//{
-//    if (context.Request.Path == "/")
-//    {
+// API Controllers
+app.MapControllers();
 
-//        context.Response.Redirect("/Home/Index/550E8400-E29B-41D4-A716-446655440040/1");
-//        return;
-//    }
-//    await next();
-//});
-
-app.MapControllerRoute(
-    name: "home_with_params",
-    pattern: "Home/Index/{ownerId:guid}/{tableId:int}",
-    defaults: new { controller = "Home", action = "Index" });
-
-app.MapControllerRoute(
-    name: "login_with_params",
-    pattern: "AuthCustomer/Login/{ownerId:guid}/{tableId:int}",
-    defaults: new { controller = "AuthCustomer", action = "Login" });
-
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{ownerId?}/{tableId?}");
-
+// SignalR Hubs
 app.MapHub<SignalrServer>("/signalrServer");
 app.MapHub<TableStatusHub>("/tableStatusHub");
+
+// Redirect root to Swagger UI
+app.MapGet("/", () => Results.Redirect("/swagger"));
 
 app.Run();

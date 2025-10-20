@@ -4,8 +4,9 @@ using RestX.API.Services.Interfaces;
 
 namespace RestX.API.Controllers
 {
-    [Route("Dish")]
-    public class DishController : Controller
+    [ApiController]
+    [Route("api/[controller]")]
+    public class DishController : ControllerBase
     {
         private readonly IDishService dishService;
         private readonly IDishManagementService dishManagementService;
@@ -21,75 +22,127 @@ namespace RestX.API.Controllers
             this.exceptionHandler = exceptionHandler;
         }
 
-        [HttpGet("Index")]
-        public async Task<IActionResult> DishesManagement(CancellationToken cancellationToken)
+        /// <summary>
+        /// Lấy danh sách tất cả món ăn
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns>Danh sách món ăn</returns>
+        [HttpGet]
+        public async Task<IActionResult> GetAllDishes(CancellationToken cancellationToken)
         {
             try
             {
-                var model = await dishManagementService.GetDishesAsync();
-                return View(model);
+                var dishes = await dishManagementService.GetDishesAsync();
+                return Ok(new { success = true, data = dishes });
             }
             catch (UnauthorizedAccessException)
             {
-                return RedirectToAction("Index", "Login");
+                return Unauthorized(new { success = false, message = "Unauthorized access" });
             }
             catch (Exception ex)
             {
-                this.exceptionHandler.RaiseException(ex, "An error occurred while loading dishes management.");
-                return View("Error");
+                this.exceptionHandler.RaiseException(ex, "An error occurred while loading dishes.");
+                return StatusCode(500, new { success = false, message = "Internal server error" });
             }
         }
 
-        [HttpPost("Upsert/{id:int?}")]
-        public async Task<IActionResult> UpsertDish([FromForm] DishRequest request, int? id = null)
+        /// <summary>
+        /// Tạo mới món ăn
+        /// </summary>
+        /// <param name="request">Thông tin món ăn</param>
+        /// <returns>Kết quả tạo món ăn</returns>
+        [HttpPost]
+        public async Task<IActionResult> CreateDish([FromForm] DishRequest request)
         {
             try
             {
+                if (!ModelState.IsValid)
+                    return BadRequest(new { success = false, message = "Invalid data", errors = ModelState });
+
                 var resultDishId = await dishService.UpsertDishAsync(request);
 
                 if (resultDishId == null)
-                    return Json(new { success = false, message = "Operation failed." });
+                    return BadRequest(new { success = false, message = "Operation failed." });
 
-                string operation = request.Id.HasValue && request.Id.Value > 0 ? "updated" : "created";
-                return Json(new { success = true, message = $"Dish {operation} successfully!", dishId = resultDishId });
+                return CreatedAtAction(nameof(GetDishById), new { id = resultDishId }, 
+                    new { success = true, message = "Dish created successfully!", dishId = resultDishId });
             }
             catch (Exception ex)
             {
-                this.exceptionHandler.RaiseException(ex, "An error occurred while saving the dish.");
-                return Json(new { success = false, message = ex.Message });
+                this.exceptionHandler.RaiseException(ex, "An error occurred while creating the dish.");
+                return StatusCode(500, new { success = false, message = "Internal server error" });
             }
         }
 
-        [HttpDelete("Delete/{id:int}")]
+        /// <summary>
+        /// Cập nhật món ăn
+        /// </summary>
+        /// <param name="id">ID món ăn</param>
+        /// <param name="request">Thông tin cập nhật</param>
+        /// <returns>Kết quả cập nhật</returns>
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> UpdateDish(int id, [FromForm] DishRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(new { success = false, message = "Invalid data", errors = ModelState });
+
+                request.Id = id;
+                var resultDishId = await dishService.UpsertDishAsync(request);
+
+                if (resultDishId == null)
+                    return NotFound(new { success = false, message = "Dish not found" });
+
+                return Ok(new { success = true, message = "Dish updated successfully!", dishId = resultDishId });
+            }
+            catch (Exception ex)
+            {
+                this.exceptionHandler.RaiseException(ex, "An error occurred while updating the dish.");
+                return StatusCode(500, new { success = false, message = "Internal server error" });
+            }
+        }
+
+        /// <summary>
+        /// Xóa món ăn
+        /// </summary>
+        /// <param name="id">ID món ăn cần xóa</param>
+        /// <returns>Kết quả xóa</returns>
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteDish(int id)
         {
             try
             {
                 await dishService.DeleteDishAsync(id);
-                return Json(new { success = true, message = "Dish deleted successfully!" });
+                return Ok(new { success = true, message = "Dish deleted successfully!" });
             }
             catch (Exception ex)
             {
                 this.exceptionHandler.RaiseException(ex, "An error occurred while deleting the dish.");
-                return Json(new { success = false, message = "An error occurred while deleting the dish." });
+                return StatusCode(500, new { success = false, message = "Internal server error" });
             }
         }
 
-        [HttpGet("Detail/{id:int}")]
-        public async Task<IActionResult> DishDetail(int id)
+        /// <summary>
+        /// Lấy thông tin chi tiết món ăn theo ID
+        /// </summary>
+        /// <param name="id">ID món ăn</param>
+        /// <returns>Thông tin chi tiết món ăn</returns>
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetDishById(int id)
         {
             try
             {
                 var dishViewModel = await dishService.GetDishViewModelByIdAsync(id);
                 if (dishViewModel == null)
-                    return Json(new { success = false, message = "Dish not found." });
+                    return NotFound(new { success = false, message = "Dish not found" });
 
-                return Json(new { success = true, data = dishViewModel });
+                return Ok(new { success = true, data = dishViewModel });
             }
             catch (Exception ex)
             {
                 this.exceptionHandler.RaiseException(ex, "An error occurred while loading dish detail.");
-                return Json(new { success = false, message = ex.Message });
+                return StatusCode(500, new { success = false, message = "Internal server error" });
             }
         }
     }

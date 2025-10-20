@@ -3,13 +3,14 @@ using RestX.API.Services.Interfaces;
 
 namespace RestX.API.Controllers
 {
-    public class BaseController : Controller
-        {
-            public readonly IExceptionHandler exceptionHandler;
+    [ApiController]
+    public abstract class BaseController : ControllerBase
+    {
+        protected readonly IExceptionHandler exceptionHandler;
 
-            public BaseController(IExceptionHandler exceptionHandler)
-            {
-                this.exceptionHandler = exceptionHandler;
-            }
+        protected BaseController(IExceptionHandler exceptionHandler)
+        {
+            this.exceptionHandler = exceptionHandler;
         }
     }
+}
