@@ -1,0 +1,277 @@
+﻿@model RestX.WebApp.Models.ViewModels.CartViewModel
+<link rel="stylesheet" href="~/css/index.css" />
+
+<style>
+
+    .order-card {
+        max-width: 360px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        padding: 20px;
+    }
+
+    .order-card h3 {
+        margin: 0 0 15px;
+        font-size: 18px;
+    }
+
+    .order-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .order-header a{
+        text-decoration: none;
+        color: #000000;
+        font-size: 20px;
+    }
+
+    .order-header button {
+        background: none;
+        border: none;
+        color: #f44336;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .item-row {
+        display: flex;
+        align-items: center;
+        margin-top: 15px;
+    }
+
+    .item-image {
+        width: 60px;
+        height: 60px;
+        background-color: #ddd;
+        border-radius: 8px;
+        margin-right: 12px;
+    }
+
+    .item-info {
+        flex: 1;
+    }
+
+    .item-info p {
+        margin: 3px 0;
+    }
+
+    .edit-link {
+        color: rgb(247, 148, 30);
+        font-size: 14px;
+        cursor: pointer;
+    }
+
+    .delete-item {
+        background: none;
+        border: none;
+        font-size: 18px;
+        color: #999;
+        cursor: pointer;
+    }
+
+    .total {
+        display: flex;
+        justify-content: space-between;
+        margin: 20px 0 10px;
+        font-weight: bold;
+    }
+
+    .confirm-button {
+        display: block;
+        width: 100%;
+        background-color: rgb(247, 148, 30);
+        color: white;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    .input-number span {
+        border: solid 1px #F4F4F4;
+        color: #A4A4A4;
+        display: flex;
+        width: 14px;
+        height: 14px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 3px;
+    }
+
+    .input-number p {
+        display: flex;
+        height: fit-content;
+    }
+
+    .input-number button{
+        border: 1px solid rgb(247, 148, 30);
+        border-radius: 5px;
+        background-color: #00000000;
+        color: rgb(247, 148, 30);
+    }
+</style>
+
+<button type="button" class="btn btn-primary" id="liveToastBtn" hidden>Show live toast</button>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3 top-0 end-0">
+    <div id="liveToast" class="toast broder border-danger bg-white" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-body text-danger">
+            @ViewBag.Message
+        </div>
+    </div>
+</div>
+
+<div class="order-card">
+    <div class="order-header">
+        <a asp-controller="Menu" asp-action="Index" asp-route-ownerId="@Model.OwnerId" asp-route-tableId="@Model.TableId"><</a>
+        <h3 class="m-0">Các món đang chọn</h3>
+        <button>Xóa giỏ</button>
+    </div>
+    @foreach(var dish in Model.DishList)
+    {
+        <div class="item-row" dish-id="@dish.DishId">
+            <img src="@dish.ImgUrl" class="item-image" />
+            <div class="item-info">
+                <p dish-name="@dish.DishName">@dish.Quantity × @dish.DishName</p>
+                <p>@((dish.Price * dish.Quantity).ToString("N0")) đ</p>
+                <p class="edit-link">Chỉnh sửa</p>
+                <div class="input-number align-items-center" style="display: none;">
+                    <span>-</span>
+                    <p class="m-0 px-4">1</p>
+                    <span>+</span>
+                    <button class="ms-5">Xác nhận</button>
+                </div>
+            </div>
+            <button class="delete-item">×</button>
+        </div>
+    }
+    
+    <div class="total">
+        <span>Tổng tiền</span>
+        <span>0 đ</span>
+    </div>
+
+    <form asp-action="IndexPost" asp-controller="Cart" asp-route-ownerId="@Model.OwnerId" asp-route-tableId="@Model.TableId" method="post">
+        <input type="hidden" name="OwnerId" value="@Model.OwnerId" />
+        <input type="hidden" name="TableId" value="@Model.TableId" />
+        <input type="hidden" name="DishListJson" value="@Model.DishListJson" />
+        <button type="submit" class="confirm-button">Xác nhận gửi yêu cầu gọi món</button>
+    </form>
+</div>
+
+<script src="~/lib/bootstrap/dist/js/bootstrap.js"></script>
+<script>
+    // RX-06
+    const itemInfo = document.getElementsByClassName("item-info");
+    const total = document.getElementsByClassName("total")[0];
+    const deleteItem = document.getElementsByClassName("delete-item");
+    const orderHeader = document.getElementsByClassName("order-header")[0];
+    const itemRow = document.getElementsByClassName("item-row");
+    const confirmButton = document.getElementsByClassName("confirm-button")[0];
+    const inputNumber = document.getElementsByClassName("input-number");
+    const editLink = document.getElementsByClassName("edit-link");
+    let totalPrice = 0;
+    let numEditDish = 0;
+
+    updatePrice();
+
+    Array.from(deleteItem).forEach(deleteBtn => {
+        deleteBtn.addEventListener("click", () => {
+            deleteBtn.parentElement.remove();
+            updatePrice();
+        });
+    });
+
+    orderHeader.children[2].addEventListener("click", () => {
+        Array.from(itemRow).forEach(dish => {
+            dish.remove();
+        });
+        updatePrice();
+        disableConfirmBtn()
+    });
+
+    Array.from(editLink).forEach((edit) => {
+        edit.addEventListener("click", () => {
+            edit.style.display = "none";
+            edit.nextElementSibling.style.display = "flex";
+            disableConfirmBtn();
+            numEditDish++;
+        });
+    });
+
+    Array.from(inputNumber).forEach((inputNum) => {
+
+        // Giảm
+        inputNum.children[0].addEventListener("click", () => {
+            let number = Number(inputNum.children[1].textContent) - 1;
+
+            // Nếu số lượng = 0 thì chuyển sang dạng button
+            if (number == 0) {
+                inputNum.previousElementSibling.style.display = "flex";
+                inputNum.style.display = "none";
+            } else {
+                inputNum.children[1].textContent = number.toString();
+            }
+        });
+
+        // Tăng
+        inputNum.children[2].addEventListener("click", () => {
+            inputNum.children[1].textContent = (Number(inputNum.children[1].textContent) + 1).toString();
+        });
+
+
+        inputNum.children[3].addEventListener("click", () => {
+            inputNum.parentElement.firstElementChild.textContent = inputNum.children[1].textContent + " x " + inputNum.parentElement.firstElementChild.getAttribute("dish-name");
+            inputNum.previousElementSibling.style.display = "block";
+            inputNum.style.display = "none";
+            numEditDish--;
+            if (numEditDish === 0) removeDisableConfirmBtn();
+        });
+    });
+
+    function updatePrice() {
+        totalPrice = 0;
+        Array.from(itemInfo).forEach(price => {
+            totalPrice += parseCurrencyString(price.children[1].textContent);
+        });
+        total.children[1].textContent = totalPrice.toLocaleString("en-US") + " đ";
+    }
+    
+    function parseCurrencyString(str) {
+        // Loại bỏ tất cả ký tự không phải số
+        const numberString = str.replace(/[^\d]/g, '');
+        return parseInt(numberString, 10);
+    }
+
+    function disableConfirmBtn(){
+        confirmButton.disabled = true;
+        confirmButton.style.backgroundColor = "gray";
+    }
+
+    function removeDisableConfirmBtn() {
+        confirmButton.disabled = false;
+        confirmButton.style.backgroundColor = "rgb(247, 148, 30)";
+    }
+
+    //RX-14
+
+    const toastTrigger = document.getElementById('liveToastBtn')
+    const toastLiveExample = document.getElementById('liveToast')
+
+    if (toastTrigger) {
+        const toastBootstrap = bootstrap.Toast.getOrCreateInstance(toastLiveExample)
+        toastTrigger.addEventListener('click', () => {
+            toastBootstrap.show()
+        })
+    }
+
+    @if (!string.IsNullOrEmpty(ViewBag.Message as string))
+    {
+        @:toastTrigger.click();
+    }
+</script>

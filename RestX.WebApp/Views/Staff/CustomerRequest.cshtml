@@ -1,0 +1,419 @@
+﻿@model RestX.WebApp.Models.ViewModels.CustomerRequestViewModel
+@{
+    ViewData["Title"] = "Customer Requests";
+    Layout = "_StaffLayout";
+}
+
+<div class="page-header">
+    <h1>Customer Orders Request</h1>
+<div class="request-list">
+    @if (Model.Orders != null && Model.Orders.Any())
+    {
+        @foreach (var order in Model.Orders)
+        {
+            <div class="request-card @(order.OrderTime.HasValue && order.OrderTime.Value.AddMinutes(10) > DateTime.Now ? "attention" : "")">
+                <div class="request-header">
+                    <div class="request-info">
+                        <span class="table-number">Table @order.TableNumber</span>
+                        <span class="customer-name">@order.CustomerName</span>
+                        <span class="customer-phone">@order.CustomerPhone</span>
+                        <span class="request-time">
+                            @if (order.OrderTime.HasValue)
+                            {
+                                var timeAgo = DateTime.Now - order.OrderTime.Value;
+                                if (timeAgo.TotalMinutes < 60)
+                                {
+                                    @($"{(int)timeAgo.TotalMinutes} minutes ago")
+                                }
+                                else if (timeAgo.TotalHours < 24)
+                                {
+                                    @($"{(int)timeAgo.TotalHours} hours ago")
+                                }
+                                else
+                                {
+                                    @order.OrderTime.Value.ToString("MM/dd HH:mm")
+                                }
+                            }
+                        </span>
+                    </div>
+                    <div class="order-status">
+                        <span class="status-badge status-@order.OrderStatus.ToLower().Replace(" ", "-")">@order.OrderStatus</span>
+                        <span class="total-amount">@order.TotalAmount.ToString("C")</span>
+                    </div>
+                </div>
+                <div class="request-content">
+                    <div class="order-summary">
+                        @if (order.OrderDetails != null && order.OrderDetails.Any())
+                        {
+                            <span>@order.OrderDetails.Count items ordered</span>
+                        }
+                        else
+                        {
+                            <span>No items in this order</span>
+                        }
+                    </div>
+                </div>
+                <div class="request-actions">
+                    <button class="btn-action btn-view" onclick="showOrderDetails('@order.Id')">
+                        <i class="ti ti-eye"></i> View Details
+                    </button>
+                    @if (order.OrderDetails != null && order.OrderDetails.Any())
+                    {
+                        <button class="btn-action btn-edit" onclick="editOrderDetails('@order.Id')">
+                            <i class="ti ti-edit"></i> Edit Items
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="no-orders">
+            <i class="ti ti-clipboard-list"></i>
+            <h3>No customer orders found</h3>
+            <p>There are currently no active orders to display.</p>
+        </div>
+    }
+</div>
+
+<!-- Order Details Modal -->
+<div id="orderDetailsModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Order Details</h2>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="orderDetailsContent">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+            <button id="saveChangesBtn" class="btn btn-primary" onclick="saveOrderDetailsChanges()" style="display: none;">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.request-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-left: 4px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.request-card.attention {
+    border-left-color: #f39c12;
+    background: #fef9e7;
+}
+
+.request-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.request-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.request-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.table-number {
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #2c3e50;
+}
+
+.customer-name {
+    color: #34495e;
+    font-weight: 500;
+}
+
+.customer-phone {
+    color: #7f8c8d;
+    font-size: 0.9em;
+}
+
+.request-time {
+    color: #95a5a6;
+    font-size: 0.85em;
+}
+
+.order-status {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.status-pending { background: #fff3cd; color: #856404; }
+.status-confirmed { background: #d4edda; color: #155724; }
+.status-preparing { background: #cce5ff; color: #004085; }
+.status-ready { background: #d1ecf1; color: #0c5460; }
+.status-completed { background: #d4edda; color: #155724; }
+
+.total-amount {
+    font-weight: bold;
+    color: #27ae60;
+    font-size: 1.1em;
+}
+
+.request-content {
+    margin-bottom: 15px;
+}
+
+.order-summary {
+    color: #6c757d;
+}
+
+.request-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-action {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.3s ease;
+}
+
+.btn-view {
+    background: #3498db;
+    color: white;
+}
+
+.btn-view:hover {
+    background: #2980b9;
+}
+
+.btn-edit {
+    background: #f39c12;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #e67e22;
+}
+
+.no-orders {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6c757d;
+}
+
+.no-orders i {
+    font-size: 3em;
+    margin-bottom: 20px;
+    color: #bdc3c7;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.close {
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #aaa;
+}
+
+.close:hover {
+    color: #000;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    padding: 20px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.order-detail-item {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.order-detail-info {
+    flex: 1;
+}
+
+.dish-name {
+    font-weight: 500;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.dish-details {
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+.order-detail-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 50px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #2196F3;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+}
+
+@@media (max-width: 768px) {
+    .request-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .order-status {
+        text-align: left;
+    }
+    
+    .request-actions {
+        justify-content: flex-start;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 2% auto;
+    }
+}
+</style>
+
+<script id="customer-request-data" type="application/json">
+@Html.Raw(Json.Serialize(Model.Orders))
+</script>
+<!-- JavaScript functionality is now handled by StaffPageManager -->
+

@@ -1,0 +1,346 @@
+﻿@model RestX.WebApp.Models.ViewModels.CustomersManagementViewModel
+
+@{
+    ViewData["Title"] = "Customers Management";
+    Layout = "~/Views/Shared/_OwnerLayout.cshtml";
+}
+
+<div class="owner-fade-in">
+    <div class="owner-page-header">
+        <h1 class="owner-page-title">
+            <i class="bi bi-people-fill me-2" style="color: var(--primary-color);"></i>
+            Customers Management
+        </h1>
+        <div class="owner-header-actions">
+            <div class="owner-search-container ms-2">
+                <select id="searchField" class="owner-form-control" style="width: 140px;">
+                    <option value="name">Name</option>
+                    <option value="phone">Phone</option>
+                    <option value="point">Point</option>
+                </select>
+            </div>
+            <div class="owner-search-container">
+                <i class="bi bi-search owner-search-icon"></i>
+                <input type="text" class="owner-search-input" id="searchInput" placeholder="Search...">
+            </div>
+            <button class="owner-btn owner-btn-primary" id="btnAddCustomer" data-bs-toggle="modal" data-bs-target="#customerModal">
+                <i class="bi bi-plus-lg"></i>
+                Add Customer
+            </button>
+        </div>
+    </div>
+
+    <div class="owner-card">
+        <div class="owner-card-body">
+            <div class="table-responsive">
+                <table class="owner-table table" id="customersTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Points</th>
+                            <th>Status</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Customers != null && Model.Customers.Any())
+                        {
+                            foreach (var customer in Model.Customers)
+                            {
+                                <tr class="customer-row owner-slide-in">
+                                    <td>@customer.Name</td>
+                                    <td>@customer.Phone</td>
+                                    <td>@customer.Point</td>
+                                    <td>
+                                        @if (customer.IsActive == true)
+                                        {
+                                            <span class="owner-badge owner-badge-success">
+                                                <i class="bi bi-check-circle me-1"></i>
+                                                Active
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="owner-badge owner-badge-danger">
+                                                <i class="bi bi-x-circle me-1"></i>
+                                                Inactive
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="owner-action-buttons">
+                                            <button class="owner-btn-action owner-btn-detail" title="View Details" onclick="viewCustomer('@customer.Id')">
+                                                <i class="bi bi-eye-fill"></i>
+                                            </button>
+                                            <button class="owner-btn-action owner-btn-edit" title="Edit Customer" onclick="editCustomer('@customer.Id')">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                            <button class="owner-btn-action owner-btn-delete" title="Delete Customer" onclick="deleteCustomer('@customer.Id', '@customer.Name')">
+                                                <i class="bi bi-trash3-fill"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr id="noCustomersRow">
+                                <td colspan="5" class="text-center py-5">
+                                    <i class="bi bi-people" style="font-size: 3rem; color: var(--text-muted);"></i>
+                                    <p class="mt-3 text-muted">No customers found</p>
+                                    <button class="owner-btn owner-btn-primary" onclick="showCustomerModal('Add New Customer')">
+                                        <i class="bi bi-plus-lg"></i>
+                                        Add Your First Customer
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div id="noSearchResults" class="text-center py-5" style="display: none;">
+                <i class="bi bi-search" style="font-size: 3rem; color: var(--text-muted);"></i>
+                <p class="mt-3 text-muted">No matching customers found</p>
+                <small class="text-muted">Try adjusting your filters or search criteria</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Customer Modal -->
+<div class="modal fade" id="customerModal" tabindex="-1" aria-labelledby="customerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius: var(--radius); border: none; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color); background: var(--bg-secondary);">
+                <h5 class="modal-title" id="customerModalLabel">
+                    <i class="bi bi-plus-circle me-2" style="color: var(--primary-color);"></i>
+                    Add New Customer
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="customerForm">
+                <div class="modal-body" style="padding: 2rem;">
+                    <input type="hidden" id="customerId" name="Id" value="">
+                    <div class="mb-3">
+                        <label for="customerName" class="owner-form-label">Name *</label>
+                        <input type="text" class="owner-form-control" id="customerName" name="Name" required maxlength="100">
+                    </div>
+                    <div class="mb-3">
+                        <label for="customerPhone" class="owner-form-label">Phone *</label>
+                        <input type="text" class="owner-form-control" id="customerPhone" name="Phone" required maxlength="20">
+                    </div>
+                    <div class="mb-3">
+                        <label for="customerPoint" class="owner-form-label">Points</label>
+                        <input type="number" class="owner-form-control" id="customerPoint" name="Point" min="0">
+                    </div>
+                    <div class="mb-2 d-flex align-items-center gap-2">
+                        <label class="owner-switch mb-0">
+                            <input type="checkbox" id="isActive" name="IsActive" checked>
+                            <span class="owner-slider"></span>
+                        </label>
+                        <label class="form-check-label mb-0" for="isActive" style="font-weight: 400; font-size: 1.05rem;">
+                            Active Status
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--border-color); background: var(--bg-secondary);">
+                    <button type="button" class="owner-btn owner-btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i>
+                        Cancel
+                    </button>
+                    <button type="submit" class="owner-btn owner-btn-primary" id="btnSaveCustomer">
+                        <i class="bi bi-check-lg"></i>
+                        Save Customer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        let allCustomers = [];
+
+        document.addEventListener('DOMContentLoaded', function () {
+            bindCustomerFormEvents();
+            initializeCustomerData();
+            document.getElementById('searchInput').addEventListener('input', searchCustomers);
+            document.getElementById('searchField').addEventListener('change', searchCustomers);
+        });
+
+        function initializeCustomerData() {
+            const rows = document.querySelectorAll('#customersTable tbody tr.customer-row');
+            allCustomers = Array.from(rows);
+        }
+
+        function searchCustomers() {
+            const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+            const field = document.getElementById('searchField').value;
+            const rows = document.querySelectorAll('#customersTable tbody tr.customer-row');
+            let found = 0;
+
+            rows.forEach(row => {
+                let value = '';
+                if (field === 'name') {
+                    value = row.querySelector('td:nth-child(1)')?.textContent.toLowerCase() || '';
+                } else if (field === 'phone') {
+                    value = row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
+                } else if (field === 'point') {
+                    value = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
+                }
+
+                if (value.includes(keyword)) {
+                    row.style.display = '';
+                    found++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            document.getElementById('noCustomersRow').style.display = found === 0 && keyword === '' ? '' : 'none';
+            document.getElementById('noSearchResults').style.display = (found === 0 && keyword !== '') ? '' : 'none';
+        }
+
+        function bindCustomerFormEvents() {
+            document.getElementById('customerForm').onsubmit = async function (e) {
+                e.preventDefault();
+                await saveCustomer();
+            };
+        }
+
+        function showCustomerModal(title, customer = null) {
+            document.getElementById('customerModalLabel').innerHTML = `<i class="bi bi-plus-circle me-2" style="color: var(--primary-color);"></i> ${title}`;
+            resetCustomerForm();
+            if (customer) fillCustomerForm(customer);
+            const customerModal = new bootstrap.Modal(document.getElementById('customerModal'));
+            customerModal.show();
+        }
+
+        function resetCustomerForm() {
+            document.getElementById('customerId').value = '';
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerPhone').value = '';
+            document.getElementById('customerPoint').value = '';
+            document.getElementById('isActive').checked = true;
+        }
+
+        function fillCustomerForm(customer) {
+            document.getElementById('customerId').value = customer.id;
+            document.getElementById('customerName').value = customer.name;
+            document.getElementById('customerPhone').value = customer.phone;
+            document.getElementById('customerPoint').value = customer.point || '';
+            document.getElementById('isActive').checked = customer.isActive;
+        }
+
+        async function saveCustomer() {
+            const id = document.getElementById('customerId').value;
+            const name = document.getElementById('customerName').value.trim();
+            const phone = document.getElementById('customerPhone').value.trim();
+            const point = document.getElementById('customerPoint').value;
+            const isActive = document.getElementById('isActive').checked;
+
+            if (!name || !phone) {
+                Swal.fire('Error', 'Please fill in all required fields!', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            if (id) formData.append('Id', id);
+            formData.append('Name', name);
+            formData.append('Phone', phone);
+            formData.append('Point', point);
+            formData.append('IsActive', isActive);
+
+            try {
+                const response = await fetch('/Customer/Upsert', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.success) {
+                    Swal.fire('Success', result.message, 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('Error', result.message || 'Cannot save customer!', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'An error occurred while saving customer!', 'error');
+            }
+        }
+
+        async function viewCustomer(id) {
+            try {
+                const response = await fetch(`/Customer/Detail/${id}`);
+                const result = await response.json();
+                if (result.success) {
+                    const customer = result.data;
+                    const html = `
+                        <table class="table table-bordered">
+                            <tr><th>Name</th><td>${customer.name}</td></tr>
+                            <tr><th>Phone</th><td>${customer.phone}</td></tr>
+                            <tr><th>Points</th><td>${customer.point ?? 0}</td></tr>
+                            <tr><th>Status</th><td>${customer.isActive ? 'Active' : 'Inactive'}</td></tr>
+                            <tr><th>Created At</th><td>${customer.createdDate ? new Date(customer.createdDate).toLocaleString() : ''}</td></tr>
+                            <tr><th>Updated At</th><td>${customer.modifiedDate ? new Date(customer.modifiedDate).toLocaleString() : ''}</td></tr>
+                        </table>
+                    `;
+                    Swal.fire({
+                        title: 'Customer Details',
+                        html: html,
+                        width: 500,
+                        showCloseButton: true,
+                        confirmButtonText: 'Close'
+                    });
+                } else {
+                    Swal.fire('Error', result.message || 'Customer not found!', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'An error occurred while loading customer details!', 'error');
+            }
+        }
+
+        async function editCustomer(id) {
+            try {
+                const response = await fetch(`/Customer/Detail/${id}`);
+                const result = await response.json();
+                if (result.success) {
+                    showCustomerModal('Edit Customer', result.data);
+                } else {
+                    Swal.fire('Error', result.message || 'Customer not found!', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'An error occurred while loading customer information!', 'error');
+            }
+        }
+
+        async function deleteCustomer(id, name) {
+            const confirm = await Swal.fire({
+                title: 'Confirm Delete',
+                text: `Are you sure you want to delete "${name}"?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonText: 'Cancel',
+                confirmButtonText: 'Delete'
+            });
+
+            if (confirm.isConfirmed) {
+                try {
+                    const response = await fetch(`/Customer/Delete/${id}`, { method: 'DELETE' });
+                    const result = await response.json();
+                    if (result.success) {
+                        Swal.fire('Deleted!', 'Customer has been deleted.', 'success')
+                            .then(() => location.reload());
+                    } else {
+                        Swal.fire('Error', result.message || 'Cannot delete customer!', 'error');
+                    }
+                } catch (error) {
+                    Swal.fire('Error', 'An error occurred while deleting customer!', 'error');
+                }
+            }
+        }
+    </script>
+}

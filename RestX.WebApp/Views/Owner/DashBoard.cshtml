@@ -1,0 +1,543 @@
+﻿@model RestX.WebApp.Models.ViewModels.DashboardViewModel
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "Dashboard";
+    Layout = "~/Views/Shared/_OwnerLayout.cshtml";
+}
+
+<div class="owner-fade-in">
+    <div class="owner-page-header">
+        <h1 class="owner-page-title">
+            <i class="bi bi-speedometer2 me-2" style="color: var(--owner-primary);"></i>
+            Dashboard
+        </h1>
+        <div class="owner-header-actions">
+            <span class="owner-greeting">
+                <i class="bi bi-sun-fill me-1" style="color: var(--owner-primary);"></i>
+                Good evening, Owner!
+            </span>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="owner-stat-card">
+                <div class="owner-stat-number">@Model.TotalRevenue.ToString()</div>
+                <div class="owner-stat-label">
+                    <i class="bi bi-currency-dollar me-1"></i>
+                    Daily Revenue
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="owner-stat-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <div class="owner-stat-number">@Model.GrowthRate.ToString("+#0\\%;-#0\\%")</div>
+                <div class="owner-stat-label">
+                    <i class="bi bi-arrow-up-circle me-1"></i>
+                    Growth Rate
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="owner-stat-card" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
+                <div class="owner-stat-number">@Model.TotalOrders</div>
+                <div class="owner-stat-label">
+                    <i class="bi bi-people me-1"></i>
+                    Total Orders
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="owner-stat-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <div class="owner-stat-number">@Model.MonthlyEarnings.ToString()</div>
+                <div class="owner-stat-label">
+                    <i class="bi bi-calendar-month me-1"></i>
+                    Monthly Earnings
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--  Row 1 -->
+    <div class="row">
+        <div class="col-lg-8 d-flex align-items-stretch">
+            <div class="owner-card w-100">
+                <div class="owner-card-header">
+                    <div class="d-sm-flex d-block align-items-center justify-content-between">
+                        <div>
+                            <h5 class="mb-0">
+                                <i class="bi bi-bar-chart-line me-2"></i>
+                                Profit Overview
+                            </h5>
+                        </div>
+                        <div>
+                            <select class="owner-form-control" id="monthSelector"></select>
+                        </div>
+                    </div>
+                </div>
+                <div class="owner-card-body">
+                    <div id="chart"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="row">
+                <div class="col-lg-12 mb-3">
+                    <!-- Yearly Breakup -->
+                    <div class="owner-card">
+                        <div class="owner-card-body">
+                            <h5 class="mb-3">
+                                <i class="bi bi-pie-chart me-2"></i>
+                                Yearly Breakup
+                            </h5>
+                            <div class="row align-items-center">
+                                <div class="col-8">
+                                    <h4 class="fw-bold mb-3 text-primary">$@Model.YearlyRevenue.Values.Sum().ToString("N0")</h4>
+                                    <div class="d-flex align-items-center mb-3">
+                                        <span class="me-2 rounded-circle @(Model.YearlyGrowthRate >= 0 ? "bg-success" : "bg-danger") d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                                            <i class="bi @(Model.YearlyGrowthRate >= 0 ? "bi-arrow-up" : "bi-arrow-down") text-white"></i>
+                                        </span>
+                                        <span class="@(Model.YearlyGrowthRate >= 0 ? "text-success" : "text-danger") me-1 fw-bold">@Model.YearlyGrowthRate.ToString("+#0\\%;-#0\\%")</span>
+                                        <span class="text-muted">last year</span>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        @{
+                                            var years = Model.YearlyRevenue.Keys.OrderBy(x => x).Take(2).ToList();
+                                        }
+                                        @for (int i = 0; i < years.Count && i < 2; i++)
+                                        {
+                                            <div class="@(i == 0 ? "me-4" : "")">
+                                                <span class="rounded-circle d-inline-block me-2" style="width: 8px; height: 8px; background: @(i == 0 ? "var(--owner-primary)" : "var(--owner-primary-light)");"></span>
+                                                <span class="text-muted">@years[i]</span>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="d-flex justify-content-center">
+                                        <div id="breakup"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-12">
+                    <!-- Monthly Earnings -->
+                    <div class="owner-card">
+                        <div class="owner-card-body">
+                            <div class="row align-items-start">
+                                <div class="col-8">
+                                    <h5 class="mb-3">
+                                        <i class="bi bi-cash-coin me-2"></i>
+                                        Monthly Earnings
+                                    </h5>
+                                    <h4 class="fw-bold mb-3 text-success">$@Model.MonthlyEarnings.ToString("N0")</h4>
+                                    <div class="d-flex align-items-center">
+                                        <span class="me-2 rounded-circle @(Model.MonthlyGrowthRate >= 0 ? "bg-success" : "bg-danger") d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                                            <i class="bi @(Model.MonthlyGrowthRate >= 0 ? "bi-arrow-up" : "bi-arrow-down") text-white"></i>
+                                        </span>
+                                        <span class="@(Model.MonthlyGrowthRate >= 0 ? "text-success" : "text-danger") me-1 fw-bold">@Model.MonthlyGrowthRate.ToString("+#0\\%;-#0\\%")</span>
+                                        <span class="text-muted">last month</span>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="d-flex justify-content-end">
+                                        <div class="text-white rounded-circle p-3 d-flex align-items-center justify-content-center" style="background: var(--owner-primary); width: 48px; height: 48px;">
+                                            <i class="bi bi-currency-dollar"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="earning"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-lg-4 d-flex align-items-stretch">
+            <div class="owner-card w-100">
+                <div class="owner-card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history me-2"></i>
+                        Recent Activity (Today)
+                    </h5>
+                </div>
+                <div class="owner-card-body p-0">
+                    <!-- Add scrollable container for Recent Activity -->
+                    <div class="dashboard-scrollable-container" style="max-height: 400px; overflow-y: auto; padding: 1rem;">
+                        <div class="timeline-widget">
+                            @if (Model.RecentActivities?.Any() == true)
+                            {
+                                @foreach (var activity in Model.RecentActivities)
+                                {
+                                    <div class="timeline-item d-flex mb-3">
+                                        <div class="timeline-time text-muted flex-shrink-0" style="min-width: 50px;">
+                                            @activity.Time.ToString("HH:mm")
+                                        </div>
+                                        <div class="timeline-badge mx-3 d-flex align-items-center">
+                                            <!-- Payment status indicator -->
+                                            <span class="rounded-circle d-inline-block"
+                                                  style="width: 12px; height: 12px; background: @(activity.IsPaid ? "#28a745" : "#dc3545");"></span>
+                                        </div>
+                                        <div class="timeline-desc flex-grow-1">
+                                            <!-- Order info header -->
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <div>
+                                                    <strong>@activity.Time.ToString("HH:mm") - @activity.TableName</strong>
+                                                    <br>
+                                                    <small class="text-muted">@activity.CustomerName</small>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="badge @(activity.IsPaid ? "bg-success" : "bg-danger") text-white">
+                                                        @(activity.IsPaid ? "Paid" : "Unpaid")
+                                                    </span>
+                                                    <br>
+                                                    <small class="text-muted">$@activity.TotalAmount.ToString("N2")</small>
+                                                </div>
+                                            </div>
+
+                                            <!-- Dishes list -->
+                                            @if (activity.Dishes?.Any() == true)
+                                            {
+                                                <div class="dishes-list">
+                                                    <small class="text-muted">
+                                                        @foreach (var dish in activity.Dishes.Take(3))
+                                                        {
+                                                            <div class="dish-item d-flex justify-content-between">
+                                                                <span>• @dish.Name</span>
+                                                                <span>$@dish.Price.ToString("N2")</span>
+                                                            </div>
+                                                        }
+                                                        @if (activity.Dishes.Count > 3)
+                                                        {
+                                                            <div class="text-muted">
+                                                                <em>and @(activity.Dishes.Count - 3) more dishes...</em>
+                                                            </div>
+                                                        }
+                                                    </small>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-center text-muted py-3">
+                                    <i class="bi bi-clock-history" style="font-size: 2rem; opacity: 0.3;"></i>
+                                    <p class="mt-2 mb-0">No activities today</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8 d-flex align-items-stretch">
+            <div class="owner-card w-100">
+                <div class="owner-card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-receipt me-2"></i>
+                        Recent Orders (Today)
+                    </h5>
+                </div>
+                <div class="owner-card-body p-0">
+                    <!-- Add scrollable container for Recent Orders -->
+                    <div class="dashboard-scrollable-container" style="max-height: 400px; overflow-y: auto;">
+                        <div class="table-responsive">
+                            <table class="owner-table table mb-0">
+                                <thead class="sticky-top bg-white" style="z-index: 10;">
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Customer</th>
+                                        <th>Items</th>
+                                        <th>Status</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (Model.RecentOrders?.Any() == true)
+                                    {
+                                        @foreach (var order in Model.RecentOrders)
+                                        {
+                                            <tr>
+                                                <td><strong>@order.OrderId</strong></td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <img src="~/images/profile/user-1.jpg" class="rounded-circle me-2" width="32" height="32" alt="">
+                                                        <div>
+                                                            <div class="fw-bold">@order.CustomerName</div>
+                                                            <small class="text-muted">@order.TableName</small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>@order.Dishes.Count items</td>
+                                                <td>
+                                                    @{
+                                                        var badgeClass = order.Status?.ToLower() switch
+                                                        {
+                                                            "completed" => "owner-badge-success",
+                                                            "preparing" => "owner-badge-warning",
+                                                            "pending" => "owner-badge-info",
+                                                            "cancelled" => "owner-badge-danger",
+                                                            _ => "owner-badge-secondary"
+                                                        };
+                                                    }
+                                                    <span class="owner-badge @badgeClass">@order.Status</span>
+                                                </td>
+                                                <td><strong>$@order.Amount.ToString("N2")</strong></td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted py-4">
+                                                <i class="bi bi-receipt" style="font-size: 2rem; opacity: 0.3;"></i>
+                                                <p class="mt-2 mb-0">No orders today</p>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Declare global variables first
+        var revenueLabels = @Html.Raw(JsonSerializer.Serialize(Model.DailyFinances.Select(x => x.Date.ToString("dd/MM"))));
+        var profitData = @Html.Raw(JsonSerializer.Serialize(Model.DailyFinances.Select(x => x.Profit)));
+        var monthlyChartData = @Html.Raw(JsonSerializer.Serialize(Model.MonthlyChartData));
+
+        // Add yearly and monthly data
+        var yearlyRevenue = @Html.Raw(JsonSerializer.Serialize(Model.YearlyRevenue));
+        var yearlyGrowthRate = @Model.YearlyGrowthRate;
+        var currentMonthRevenue = @Model.CurrentMonthRevenue;
+        var previousMonthRevenue = @Model.PreviousMonthRevenue;
+        var monthlyGrowthRate = @Model.MonthlyGrowthRate;
+        var monthlyEarnings = @Model.MonthlyEarnings;
+
+        // Add monthly earnings trend data for earning chart
+        var monthlyEarningsTrend = @Html.Raw(JsonSerializer.Serialize(Model.MonthlyEarningsTrend));
+
+        console.log('Monthly Chart Data:', monthlyChartData);
+        console.log('Initial Revenue Labels:', revenueLabels);
+        console.log('Initial Profit Data:', profitData);
+        console.log('Yearly Revenue:', yearlyRevenue);
+        console.log('Monthly Growth Rate:', monthlyGrowthRate);
+        console.log('Monthly Earnings Trend:', monthlyEarningsTrend);
+    </script>
+
+    <script src="/js/dashboard.js"></script>
+
+    <script>
+        // Function to create or update chart
+        function createOrUpdateChart(selectedMonth) {
+            console.log('createOrUpdateChart called with:', selectedMonth);
+
+            let labels, profits;
+
+            // Handle "none" selection or specific month data
+            if (selectedMonth === 'none' || selectedMonth === '') {
+                // Use default data for "none" selection
+                labels = revenueLabels;
+                profits = profitData;
+                console.log('Using default data (none selected)');
+            } else if (monthlyChartData && monthlyChartData[selectedMonth]) {
+                const monthData = monthlyChartData[selectedMonth];
+                console.log('Month data:', monthData);
+
+                labels = monthData.map(x => {
+                    const date = new Date(x.Date);
+                    return (date.getDate()).toString().padStart(2, '0') + '/' + (date.getMonth() + 1).toString().padStart(2, '0');
+                });
+                profits = monthData.map(x => x.Profit);
+            } else {
+                // Fallback to default data
+                labels = revenueLabels;
+                profits = profitData;
+            }
+
+            console.log('Using Labels:', labels);
+            console.log('Using Profits:', profits);
+
+            // Destroy existing chart if it exists
+            if (window.profitChart) {
+                window.profitChart.destroy();
+                console.log('Existing chart destroyed');
+            }
+
+            // Create new chart
+            var chartOptions = {
+                series: [
+                    { name: "Revenue", data: profits }
+                ],
+
+                chart: {
+                    type: "bar",
+                    height: 345,
+                    offsetX: -15,
+                    toolbar: { show: true },
+                    foreColor: "#adb0bb",
+                    fontFamily: 'inherit',
+                    sparkline: { enabled: false },
+                },
+
+                colors: ["#5D87FF"],
+
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: "35%",
+                        borderRadius: [6],
+                        borderRadiusApplication: 'end',
+                        borderRadiusWhenStacked: 'all'
+                    },
+                },
+                markers: { size: 0 },
+
+                dataLabels: {
+                    enabled: false,
+                },
+
+                legend: {
+                    show: false,
+                },
+
+                grid: {
+                    borderColor: "rgba(0,0,0,0.1)",
+                    strokeDashArray: 3,
+                    xaxis: {
+                        lines: {
+                            show: false,
+                        },
+                    },
+                },
+
+                xaxis: {
+                    type: "category",
+                    categories: labels,
+                    labels: {
+                        style: { cssClass: "grey--text lighten-2--text fill-color" },
+                    },
+                },
+
+                yaxis: {
+                    show: true,
+                    min: 0,
+                    max: Math.max(...profits) * 1.2 || 10000000,
+                    tickAmount: 4,
+                    labels: {
+                        style: {
+                            cssClass: "grey--text lighten-2--text fill-color",
+                        },
+                    },
+                },
+                stroke: {
+                    show: true,
+                    width: 3,
+                    lineCap: "butt",
+                    colors: ["transparent"],
+                },
+
+                tooltip: { theme: "light" },
+
+                responsive: [
+                    {
+                        breakpoint: 600,
+                        options: {
+                            plotOptions: {
+                                bar: {
+                                    borderRadius: 3,
+                                }
+                            },
+                        }
+                    }
+                ]
+            };
+
+            // Create new chart
+            window.profitChart = new ApexCharts(document.querySelector("#chart"), chartOptions);
+            window.profitChart.render();
+            console.log('New chart created and rendered');
+        }
+
+        $(document).ready(function() {
+            console.log('Document ready');
+
+            // Initialize month selector
+            const monthSelector = document.getElementById('monthSelector');
+            if (monthSelector) {
+                const now = new Date();
+
+                // Add "None" option as default
+                const noneOption = document.createElement('option');
+                noneOption.value = 'none';
+                noneOption.text = 'Select Month';
+                noneOption.selected = true;
+                monthSelector.appendChild(noneOption);
+
+                // Add month options
+                for (let i = 0; i < 4; i++) {
+                    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                    const value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+                    const text = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.text = text;
+                    monthSelector.appendChild(option);
+                }
+
+                console.log('Month selector initialized with "Select Month" as default');
+
+                // Add event listener for month selection change
+                monthSelector.addEventListener('change', function() {
+                    console.log('Month changed to:', this.value);
+                    createOrUpdateChart(this.value);
+                });
+
+                // Wait for dashboard.js to load, then create initial chart with default data
+                setTimeout(() => {
+                    console.log('Creating initial chart with default data');
+                    createOrUpdateChart('none');
+                }, 2000);
+            }
+
+            // Add custom styling for scrollbars
+            const style = document.createElement('style');
+            style.textContent = `
+                .dashboard-scrollable-container::-webkit-scrollbar {
+                    width: 6px;
+                }
+                .dashboard-scrollable-container::-webkit-scrollbar-track {
+                    background: #f1f1f1;
+                    border-radius: 3px;
+                }
+                .dashboard-scrollable-container::-webkit-scrollbar-thumb {
+                    background: #c1c1c1;
+                    border-radius: 3px;
+                }
+                .dashboard-scrollable-container::-webkit-scrollbar-thumb:hover {
+                    background: #a8a8a8;
+                }
+                .dashboard-scrollable-container {
+                    scrollbar-width: thin;
+                    scrollbar-color: #c1c1c1 #f1f1f1;
+                }
+            `;
+            document.head.appendChild(style);
+        });
+    </script>
+}

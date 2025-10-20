@@ -1,0 +1,561 @@
+﻿@using System.Text.Json
+
+@model RestX.WebApp.Models.ViewModels.MenuViewModel
+<link rel="stylesheet" href="~/css/index.css" />
+
+<style>
+    .menu-category-bar {
+        display: flex;
+        overflow-x: auto;
+        border-bottom: 1.5px solid #f2f2f2;
+        background: #fff;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 0 8px;
+        scrollbar-width: none;
+    }
+
+        .menu-category-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+    .menu-category-item {
+        padding: 14px 16px 10px 16px;
+        font-weight: 500;
+        font-size: 1.07rem;
+        color: #888;
+        cursor: pointer;
+        border: none;
+        background: none;
+        outline: none;
+        border-bottom: 2.5px solid transparent;
+        transition: color 0.2s, border-color 0.2s;
+        white-space: nowrap;
+        margin-right: 2px;
+    }
+
+        .menu-category-item.active {
+            color: #ff9800;
+            border-bottom: 2.5px solid #ff9800;
+            background: none;
+        }
+
+        .menu-category-item:focus {
+            outline: none;
+        }
+
+    .menu-section {
+        margin: 0 0 24px 0;
+        padding: 0 12px;
+    }
+
+    .menu-section-title {
+        font-weight: 600;
+        font-size: 1.09rem;
+        margin: 18px 0 10px 0;
+        color: #222;
+        letter-spacing: 0.5px;
+    }
+
+    .menu-dish-card {
+        display: flex;
+        align-items: center;
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 2px 8px #f3f3f3;
+        margin-bottom: 14px;
+        padding: 10px 12px;
+        transition: box-shadow 0.18s;
+    }
+
+        .menu-dish-card:active {
+            box-shadow: 0 2px 12px #e0e0e0;
+        }
+
+    .menu-dish-img {
+        width: 54px;
+        height: 54px;
+        border-radius: 12px;
+        object-fit: cover;
+        margin-right: 14px;
+        border: 1px solid #f1f1f1;
+        background: #fafafa;
+    }
+
+    .menu-dish-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .menu-dish-name {
+        font-size: 1.05rem;
+        font-weight: 500;
+        color: #222;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .menu-dish-desc {
+        font-size: 0.95rem;
+        color: #888;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .menu-dish-price {
+        color: #ff9800;
+        font-weight: 500;
+        font-size: 1.01rem;
+        margin-top: 2px;
+    }
+
+    .menu-dish-add {
+        margin-left: 10px;
+        color: #ff9800;
+        font-size: 1.7rem;
+        cursor: pointer;
+        border: none;
+        background: none;
+        outline: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        transition: background 0.15s;
+    }
+
+        .menu-dish-add:active {
+            background: #fff3e0;
+            color: #d17a00;
+        }
+
+    /* RX-06 */
+
+    .input-number span {
+        border: solid 1px #F4F4F4;
+        color: #A4A4A4;
+        display: flex;
+        width: 14px;
+        height: 14px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 3px;
+    }
+
+    .input-number p {
+        display: flex;
+        height: fit-content;
+    }
+
+    .ViewChoseOrder {
+        --bs-gutter-x: 0;
+    }
+
+    .OrderList {
+        --bs-gutter-x: 0;
+    }
+
+        .OrderList img {
+            width: 36px;
+            height: 36px;
+        }
+
+    .ShortConfirm {
+        --bs-gutter-x: 0;
+        background-color: #ff9800;
+        color: #fff;
+        border-radius: 5px;
+        border: none;
+        width: 100%;
+    }
+
+</style>
+
+<div class="container-mobile">
+    <!-- Search bar and home icon -->
+    <div style="display:flex;align-items:center;padding:12px 8px 0 8px;">
+        <a href="/Home/Index/@Model.OwnerId/@Model.TableId" style="font-size:1.3rem;color:#ff9800;margin-right:8px;display:inline-block;text-decoration:none;">🏠</a>
+        <input id="searchDish" type="text" placeholder="Bạn muốn tìm món gì ?" style="flex:1;border:none;background:#f7f7f7;border-radius:8px;padding:8px 12px;font-size:1rem;outline:none;" />
+    </div>
+
+    <!-- Category Bar -->
+    <div class="menu-category-bar" id="categoryBar">
+        @for (int i = 0; i < Model.Categories.Count; i++)
+        {
+            <button class="menu-category-item @(i == 0 ? "active" : "")"
+                    data-category="@Model.Categories[i].Id"
+                    onclick="scrollToCategory(@Model.Categories[i].Id)">
+                @Model.Categories[i].CategoryName
+            </button>
+        }
+        <button class="menu-category-item" style="min-width:32px;padding:0 8px;background:none;border:none;pointer-events:none;">&#9660;</button>
+    </div>
+
+    <template data-category-template>
+        <div class="menu-section" data-category-id>
+            <div class="menu-section-title" data-category-name></div>
+
+        </div>
+    </template>
+
+    <template data-dish-template>
+        <div class="menu-dish-card" data-dish-id>
+            <img class="menu-dish-img" data-dish-name-img />
+            <div class="menu-dish-info">
+                <div class="menu-dish-name" data-dish-name></div>
+                <div class="menu-dish-desc" data-dish-desc></div>
+                <div class="menu-dish-price" data-dish-price></div>
+            </div>
+            <button class="menu-dish-add" title="add">
+                <span>+</span>
+            </button>
+            <div class="input-number align-items-center" style="display: none;">
+                <span>-</span>
+                <p class="m-0 px-4">1</p>
+                <span>+</span>
+            </div>
+        </div>
+    </template>
+
+    <!-- Dishes by Category -->
+    <div id="menuSections">
+        @foreach (var category in Model.Categories)
+        {
+            <div class="menu-section" id="category-@category.Id">
+                <div class="menu-section-title">@category.CategoryName</div>
+                @foreach (var dish in category.Dishes)
+                {
+                    <div class="menu-dish-card" dish-id="@dish.Id">
+                        <img class="menu-dish-img" src="@(Url.Content(dish.ImageUrl))" alt="@dish.Name" />
+                        <div class="menu-dish-info">
+                            <div class="menu-dish-name">@dish.Name</div>
+                            @if (!string.IsNullOrEmpty(dish.Description))
+                            {
+                                <div class="menu-dish-desc">@dish.Description</div>
+                            }
+                            <div class="menu-dish-price">@dish.Price.ToString("N0") đ</div>
+                        </div>
+                        <button class="menu-dish-add" title="add">
+                            <span>+</span>
+                        </button>
+                        <div class="input-number align-items-center" style="display: none;">
+                            <span>-</span>
+                            <p class="m-0 px-4">1</p>
+                            <span>+</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="ViewChoseOrder row py-3 position-fixed bottom-0 start-50 translate-middle-x w-100 bg-white px-3" style="display: none;">
+        <div class="OrderList col-6 row flex-nowrap justify-content-start align-items-center">
+            <h5 class="m-0" hidden>+0</h5>
+        </div>
+        <form action="/Cart/Index/@Model.OwnerId/@Model.TableId" method="get" class="col-6">
+            <input type="hidden" name="OwnerId" value="@Model.OwnerId" />
+            <input type="hidden" name="TableId" value="@Model.TableId" />
+            <input type="hidden" name="DishListJson" id="jsonData" />
+            <button type="submit" class="ShortConfirm row align-items-center px-2 py-1">
+                <p class="col-5 m-0">999.999đ</p>
+                <h5 class="col-7 m-0 text-center">Xem,<br />xác nhận</h5>
+            </button>
+        </form>
+
+    </div>
+</div>
+
+<script src="~/microsoft/signalr/dist/browser/signalr.js"></script>
+<script src="~/js/site.js"></script>
+<script>
+    const categoryBar = document.getElementById('categoryBar');
+    const categoryButtons = categoryBar.querySelectorAll('.menu-category-item');
+    const sections = Array.from(document.querySelectorAll('.menu-section'));
+
+    function getBarHeight() {
+        return categoryBar.offsetHeight || 0;
+    }
+
+    function scrollToCategory(categoryId) {
+        const section = document.getElementById('category-' + categoryId);
+        if (section) {
+            const y = section.getBoundingClientRect().top + window.pageYOffset - getBarHeight() - 2;
+            window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+        const btn = categoryBar.querySelector('.menu-category-item[data-category="' + categoryId + '"]');
+        if (btn) {
+            btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+    }
+
+    window.addEventListener('scroll', function () {
+        let activeIdx = 0;
+        const barHeight = getBarHeight();
+        let minDiff = Number.POSITIVE_INFINITY;
+        for (let i = 0; i < sections.length; i++) {
+            const rect = sections[i].getBoundingClientRect();
+            const diff = Math.abs(rect.top - barHeight);
+            if (rect.top - barHeight <= 8 && diff < minDiff) {
+                minDiff = diff;
+                activeIdx = i;
+            }
+        }
+        categoryButtons.forEach((btn, idx) => {
+            btn.classList.toggle('active', idx === activeIdx);
+        });
+        const activeBtn = categoryButtons[activeIdx];
+        if (activeBtn) {
+            activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+    });
+
+    // RX-06
+
+    const ViewChoseOrder = document.getElementsByClassName("ViewChoseOrder")[0];
+    const OrderList = document.getElementsByClassName("OrderList")[0];
+    let numChosenDish = 0;
+    const ShortConfirm = document.getElementsByClassName("ShortConfirm")[0];
+    let CartValue = 0;
+    let cart = [];
+    let jsonData = document.getElementById("jsonData");
+
+    loadAddDish();
+
+    function loadAddDish() {
+
+        // Nếu ấn vào .menu-dish-add thì nó sẽ hiện .input-number
+        const menuDishAdd = document.getElementsByClassName("menu-dish-add");
+        Array.from(menuDishAdd).forEach((btn) => {
+            btn.addEventListener("click", () => {
+                btn.style.display = "none";
+                btn.nextElementSibling.style.display = "flex";
+                ViewChoseOrder.style.display = "flex";
+                numChosenDish++;
+                updateOrderWindow(btn.parentElement.children[0].src, btn.parentElement.children[0].alt);
+
+                // Cập nhật giá tiền
+                CartValue += parseCurrencyString(btn.previousElementSibling.lastElementChild.textContent);
+                updateCartValue();
+
+                // Chuẩn bị cho cart
+                cart.push({
+                    DishId: Number(btn.parentElement.getAttribute("dish-id")),
+                    DishName: btn.parentElement.firstElementChild.alt,
+                    Quantity: Number(1),
+                    Price: parseCurrencyString(btn.previousElementSibling.lastElementChild.textContent),
+                    ImgUrl: btn.parentElement.firstElementChild.src,
+                });
+                jsonData.value = JSON.stringify(cart);
+            });
+
+        });
+
+
+        // Nếu ấn vào +/- thì sẽ thay đổi giá trị số lượng sản phẩm
+        const inputNumber = document.getElementsByClassName("input-number");
+        Array.from(inputNumber).forEach((inputNum) => {
+
+            // Giảm
+            inputNum.children[0].addEventListener("click", () => {
+                let number = Number(inputNum.children[1].textContent) - 1;
+
+                // Nếu số lượng = 0 thì chuyển sang dạng button
+                if (number == 0) {
+                    inputNum.previousElementSibling.style.display = "flex";
+                    inputNum.style.display = "none";
+                    numChosenDish--;
+
+                    updateOrderWindow("", inputNum.parentElement.children[0].alt);
+
+                    RemoveFromCart(Number(inputNum.parentElement.getAttribute("dish-id")));
+                } else {
+                    inputNum.children[1].textContent = number.toString();
+
+                    UpdateNumberFromCart(Number(inputNum.parentElement.getAttribute("dish-id")), number);
+                }
+
+                // Cập nhật giá tiền
+                CartValue -= parseCurrencyString(inputNum.previousElementSibling.previousElementSibling.lastElementChild.textContent);
+                updateCartValue();
+            });
+
+
+            // Tăng
+            inputNum.children[2].addEventListener("click", () => {
+                inputNum.children[1].textContent = (Number(inputNum.children[1].textContent) + 1).toString();
+
+                // Cập nhật giá tiền
+                CartValue += parseCurrencyString(inputNum.previousElementSibling.previousElementSibling.lastElementChild.textContent);
+                updateCartValue();
+
+                UpdateNumberFromCart(Number(inputNum.parentElement.getAttribute("dish-id")), Number(inputNum.children[1].textContent));
+            });
+        });
+    }
+
+    // cap nhat thanh xem truoc gio hang duoi man hinh
+    function updateOrderWindow(srcImg, altImg) {
+        if (!srcImg || srcImg.trim() === "") {
+
+            Array.from(OrderList.children).forEach((img) => {
+                if (img.alt === altImg) {
+                    img.remove();
+                }
+            });
+
+
+            const numberOrder = OrderList.children.length - 1;
+
+            // neu khong con gi o thanh xem truoc gio hang thi display: none
+            if (numberOrder === 0) {
+                ViewChoseOrder.style.display = "none";
+            } else if (numberOrder > 3) {
+                // Cap nhat hinh anh nho ben canh nut Xem, xac nhan
+
+                let num = 0;
+                Array.from(OrderList.children).forEach((dishImg) => {
+                    if (num > 3 && num < numberOrder) {
+                        dishImg.setAttribute("hidden", "");
+                    } else {
+                        console.log(dishImg.textContent);
+                        dishImg.removeAttribute("hidden");
+                        if (num == numberOrder){
+                            dishImg.textContent = (num - 4) + "+";
+                        }
+                        if (num == 4 && dishImg.textContent) {
+                            dishImg.setAttribute("hidden", "");
+                        }
+                    }
+                    num++;
+                })
+            }
+        } else {
+            const newImg = document.createElement("img");
+            newImg.className = "pe-1";
+            newImg.alt = altImg;
+            OrderList.prepend(newImg);
+
+            // Cap nhat hinh anh nho ben canh nut Xem, xac nhan
+            const numberOrder = OrderList.children.length - 1;
+            if (numberOrder > 4) {
+
+                let num = 0;
+                Array.from(OrderList.children).forEach((dishImg) => {
+                    if (num > 3 && num < numberOrder) {
+                        dishImg.setAttribute("hidden", "");
+
+                    } else {
+                        dishImg.removeAttribute("hidden");
+                        if (num == numberOrder){
+                            dishImg.textContent = (num - 4) + "+";
+                        }
+                    }
+                    num++;
+                })
+            }
+        }
+    }
+
+    function updateCartValue() {
+        ShortConfirm.children[0].textContent = CartValue + "đ";
+    }
+
+    function parseCurrencyString(str) {
+        // Loại bỏ tất cả ký tự không phải số
+        const numberString = str.replace(/[^\d]/g, '');
+        return parseInt(numberString, 10);
+    }
+
+    function RemoveFromCart(dishId) {
+        const removeDishIndex = cart.findIndex(dish => dish.DishId == dishId);
+
+        cart.splice(removeDishIndex, 1);
+        jsonData.value = JSON.stringify(cart);
+    }
+
+    function UpdateNumberFromCart(dishId, numDish) {
+        const updateDishIndex = cart.findIndex(dish => dish.DishId == dishId);
+
+        cart[updateDishIndex].Quantity = numDish;
+        jsonData.value = JSON.stringify(cart);
+    }
+
+    // RX-17
+
+    const showCategoryTemplate = document.querySelector('[data-category-template]');
+    const showDishTemplate = document.querySelector('[data-dish-template]');
+    const searchDish = document.getElementById("searchDish");
+    const menuSections = document.getElementById("menuSections");
+    let dishesJson = @Html.Raw(JsonSerializer.Serialize(Model.Categories));
+
+    searchDish.addEventListener("input", (e) => {
+        const searchString = e.target.value.toLowerCase();
+
+        loadSearch(searchString);
+    });
+
+    function loadSearch(searchString) {
+        menuSections.innerHTML = "";
+        dishesJson.forEach((category) => {
+            const categoryTemp = showCategoryTemplate.content.cloneNode(true).children[0];
+            const categoryId = categoryTemp.querySelector('[data-category-id]');
+            const categoryName = categoryTemp.querySelector('[data-category-name]');
+            categoryTemp.setAttribute("id", "category-" + category.Id);
+            categoryName.textContent = category.CategoryName;
+
+            menuSections.append(categoryTemp);
+            const CategoryIdTemp = document.getElementById("category-" + category.Id);
+
+            category.Dishes.forEach((dish) => {
+                if (dish.Name.toLowerCase().includes(searchString)) {
+                    const dishTemp = showDishTemplate.content.cloneNode(true);
+                    const dishId = dishTemp.querySelector("[data-dish-id]");
+                    const dishImg = dishTemp.querySelector("[data-dish-name-img]");
+                    const dishName = dishTemp.querySelector("[data-dish-name]");
+                    const dishDesc = dishTemp.querySelector("[data-dish-desc]");
+                    const dishPrice = dishTemp.querySelector("[data-dish-price]");
+
+                    dishId.setAttribute("dish-id", dish.Id);
+                    dishImg.src = dish.ImageUrl;
+                    dishImg.alt = dish.Name;
+                    dishName.textContent = dish.Name;
+                    dishDesc.textContent = dish.Description;
+                    dishPrice.textContent = dish.Price + " đ";
+
+                    CategoryIdTemp.append(dishTemp);
+                }
+            });
+
+        });
+        loadAddDish();
+        updateDishOnScreen();
+    }
+
+    function updateDishOnScreen() {
+        const currentDishes = document.getElementsByClassName("menu-dish-card");
+
+        cart.forEach(dishCart => {
+            var currDish = [...currentDishes].find(dish =>
+                dish.getAttribute("dish-id") == dishCart.DishId
+            );
+
+            if (currDish == null) return;
+
+            console.log(currDish);
+
+            var chooseNum = currDish.lastElementChild;
+            chooseNum.style.display = "flex";
+            chooseNum.previousElementSibling.style.display = "none";
+
+            chooseNum.children[1].textContent = dishCart.Quantity.toString();
+        });
+    }
+</script>

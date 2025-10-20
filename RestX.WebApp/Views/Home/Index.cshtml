@@ -1,0 +1,168 @@
+﻿@model RestX.WebApp.Models.Home.HomeViewModel
+@{
+    ViewData["Title"] = "Home Page";
+    var ownerId = ViewBag.OwnerId as Guid?;
+    var tableId = ViewBag.TableId as int?;
+    var isLoggedIn = ViewBag.IsLoggedIn as bool? ?? false;
+    var customerName = ViewBag.CustomerName as string;
+    var customerPhone = ViewBag.CustomerPhone as string;
+    var message = ViewBag.Message as string;
+}
+
+<link rel="stylesheet" href="~/css/index.css" />
+<style>
+    .phone-points.logged-in {
+        background-color: #e8f5e8;
+        border: 1px solid #4caf50;
+    }
+
+    .phone-display {
+        font-weight: bold;
+        color: #2e7d32;
+        margin-left: 10px;
+    }
+
+    .phone-points {
+        display: block;
+        transition: background-color 0.2s;
+    }
+
+    .phone-points:hover:not(.logged-in) {
+        background-color: #f0f8ff;
+    }
+
+    .floating-btn{
+        text-decoration: none;
+        border: none;
+        outline: none;
+    }
+
+    .floating-btn p {
+        background: white;
+        font-size: 15px;
+        color: #ff9800;
+        position: absolute;
+        top: 20%;
+        left: 0;
+        transform: translateX(-105%);
+        background-color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        z-index: 10;
+        max-width: 60vw;
+        width: max-content;
+        border: solid 1px #ff9800;
+        text-align: end;
+        
+    }
+</style>
+
+<div class="container-mobile">
+    <!-- Header -->
+    <div class="header">
+        <div style="font-size:1.2rem;color:#888;margin-right:8px;">🏠</div>
+        <div class="header-info">
+            <div class="header-title">@Model.Name</div>
+            <div class="header-address">@Model.Address</div>
+        </div>
+        <div class="header-flag">
+            <span style="font-size:1.2rem;">🇬🇧</span>
+        </div>
+    </div>
+
+    <!-- Banner -->
+    <div class="banner">
+        <img src="@Model.FileUrl" alt="Banner" />
+    </div>
+
+    <!-- Greeting -->
+    <div class="greeting">
+        <span class="icon">🌙</span>
+        @if (isLoggedIn)
+        {
+            <text>Good evening <span class="customer"> @customerName</span></text>
+        }
+        else
+        {
+            <text>Good evening <span class="customer">Customers</span></text>
+        }
+        <span class="edit">✏️</span>
+    </div>
+
+    <div class="table-info">
+        We will return your items to you at the table: <span class="table-code">@Model.TableNumber</span>
+    </div>
+
+    <!-- Phone points -->
+    @if (isLoggedIn)
+    {
+        <div class="phone-points logged-in">
+            <span class="icon">🎁</span>
+            <span>Welcome back, @customerName!</span>
+            <span class="phone-display">@customerPhone</span>
+        </div>
+    }
+    else
+    {
+        @if (ownerId.HasValue && tableId.HasValue)
+        {
+            <a href="@Url.Action("Login", "AuthCustomer", new { ownerId = ownerId.Value, tableId = tableId.Value })"
+               class="phone-points" style="text-decoration: none; color: inherit; cursor: pointer;">
+                <span class="icon">🎁</span>
+                Enter phone number to accumulate points
+            </a>
+        }
+        else
+        {
+            <div class="phone-points">
+                <span class="icon">🎁</span>
+                Enter phone number to accumulate points
+            </div>
+        }
+    }
+
+    <!-- Quick actions -->
+    <div class="quick-actions">
+        <div class="quick-action">
+            <span class="icon">🧾</span>
+            Request bill
+        </div>
+        <div class="quick-action">
+            <span class="icon">🧑‍💼</span>
+            Ask for service
+        </div>
+        <a asp-controller="Ai" asp-action="Index" asp-route-ownerId="@Model.OwnerId" asp-route-tableId="@Model.TableId" style="text-decoration: none;">
+            <div class="quick-action">
+                <span class="icon">⭐</span>
+                AI Suggest Dish
+            </div>
+        </a>
+    </div>
+
+    <!-- Order menu -->
+    <a asp-controller="Menu" asp-action="Index" asp-route-ownerId="@Model.OwnerId" asp-route-tableId="@Model.TableId"
+       class="order-menu" style="cursor:pointer; text-decoration: none;">
+        <span class="icon">🍽️</span>
+        View Menu - Order food
+        <span class="arrow">&gt;</span>
+    </a>
+
+    <!-- Floating button -->
+    <a href="/Order/History/@(ownerId)/@(tableId)" class="floating-btn">
+        <p style="display: none;">@message</p>
+        <span>🔔</span>
+    </a>
+
+    <div class="powered-by">
+        Powered by RestX
+    </div>
+</div>
+
+<script>
+    const floatingBtn = document.getElementsByClassName("floating-btn")[0];
+    const messages = floatingBtn.querySelector("p");
+    if (messages.textContent != "") {
+        messages.style.display = "block";
+    }
+        
+</script>

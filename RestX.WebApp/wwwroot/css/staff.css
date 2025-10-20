@@ -1,0 +1,594 @@
+/* General */
+body {
+  background-color: #f0f2f5;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.container-mobile {
+  max-width: 480px;
+  margin: 0 auto;
+  background-color: #ffffff;
+  min-height: 100vh;
+  position: relative;
+  padding: 1px 0 80px 0; /* Adjusted padding */
+}
+
+.page-header {
+  padding: 16px;
+  background-color: #fff;
+  border-bottom: 1px solid #eee;
+}
+
+.page-header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1c1c1c;
+  margin: 0;
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-around;
+  background-color: #ffffff;
+  border-top: 1px solid #e0e0e0;
+  padding: 8px 0;
+  z-index: 1000;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: #888;
+  font-size: 0.75rem;
+  flex-grow: 1;
+  padding: 4px 0;
+  transition: color 0.2s;
+}
+
+.nav-item i {
+  font-size: 1.4rem;
+  margin-bottom: 4px;
+}
+
+.nav-item.active {
+  color: #ff9800;
+}
+
+/* Customer Request Page */
+.request-list {
+  padding: 16px;
+}
+
+.request-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-bottom: 16px;
+  padding: 16px;
+  border-left: 5px solid #2196f3; /* Blue for standard requests */
+}
+
+.request-card.attention {
+  border-left-color: #f44336; /* Red for urgent requests */
+}
+
+.request-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.table-number {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.request-time {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.request-content {
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 16px;
+}
+
+.request-actions {
+  text-align: right;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn-action {
+  background-color: #f0f2f5;
+  color: #333;
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background-color 0.2s, border-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.btn-action:hover {
+  background-color: #e4e6e9;
+}
+
+.request-actions .btn-action {
+  width: auto;
+  margin-top: 0;
+}
+
+.btn-confirm {
+  background-color: #4caf50;
+  color: white;
+  border-color: #4caf50;
+}
+
+.btn-confirm:hover {
+  background-color: #45a049;
+}
+
+.btn-cancel {
+  background-color: #f44336;
+  color: white;
+  border-color: #f44336;
+}
+
+.btn-cancel:hover {
+  background-color: #d32f2f;
+}
+
+.btn-done {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.btn-done:hover {
+  background-color: #45a049;
+}
+
+/* Status Table Page */
+.table-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+
+.table-card {
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  color: #fff;
+  font-weight: 500;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+}
+
+.table-card:active {
+  transform: scale(0.95);
+}
+
+.table-card-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.table-card-status {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  margin-top: 4px;
+  opacity: 0.9;
+}
+
+.table-status-available {
+  background: linear-gradient(135deg, #66bb6a, #43a047);
+}
+
+.table-status-occupied {
+  background: linear-gradient(135deg, #ffa726, #fb8c00);
+}
+
+.table-status-reserved {
+  background: linear-gradient(135deg, #42a5f5, #1e88e5);
+}
+
+.table-status-cleaning {
+  background: linear-gradient(135deg, #ef5350, #e53935);
+}
+
+/* Menu Page */
+.menu-container {
+  padding: 0;
+}
+.search-bar-staff {
+  padding: 16px;
+  border-bottom: 1px solid #eee;
+}
+.search-bar-staff input {
+  width: 100%;
+  border: 1px solid #ddd;
+  background: #f7f7f7;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 1rem;
+  outline: none;
+}
+
+.menu-section-staff {
+  padding: 0 16px;
+}
+
+.menu-section-title-staff {
+  font-weight: 600;
+  font-size: 1.2rem;
+  margin: 18px 0 10px 0;
+  color: #222;
+}
+
+.menu-dish-card-staff {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  margin-bottom: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.menu-dish-img-staff {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  object-fit: cover;
+  margin-right: 14px;
+}
+
+.menu-dish-info-staff {
+  flex: 1;
+}
+
+.menu-dish-name-staff {
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #222;
+}
+
+.menu-dish-price-staff {
+  color: #888;
+  font-size: 0.95rem;
+  margin-top: 4px;
+}
+
+.availability-toggle {
+  display: flex;
+  align-items: center;
+  color: #4caf50;
+}
+
+.availability-toggle.off {
+  color: #f44336;
+}
+
+.availability-toggle span {
+  margin-right: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Profile Page */
+.profile-container {
+  padding: 16px;
+  text-align: center;
+}
+
+.profile-header {
+  margin-bottom: 24px;
+}
+
+.profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 16px;
+  border: 4px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.profile-name {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.profile-role {
+  font-size: 1rem;
+  color: #888;
+}
+
+.profile-info-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+
+.profile-info-item {
+  background: #f9f9f9;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+}
+
+.profile-info-item i {
+  color: #ff9800;
+  font-size: 1.2rem;
+  margin-right: 16px;
+  width: 20px;
+  text-align: center;
+}
+
+.profile-container .btn-logout {
+  margin-top: 12px;
+}
+
+.btn-logout {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  width: 100%;
+  margin-top: 24px;
+  transition: background-color 0.2s;
+}
+
+.btn-logout:hover {
+  background-color: #d32f2f;
+}
+
+/* QR Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 24px;
+  border-radius: 16px;
+  width: 85%;
+  max-width: 280px;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.modal-content h3 {
+  margin: 0 0 20px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.status-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.status-option {
+  padding: 16px 20px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.status-option:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Trống - Màu xanh lá */
+.status-option[data-status-id="1"] {
+  background-color: #4caf50;
+  border-color: #4caf50;
+}
+
+.status-option[data-status-id="1"]:hover {
+  background-color: #45a049;
+  border-color: #45a049;
+}
+
+/* Có khách - Màu cam */
+.status-option[data-status-id="2"] {
+  background-color: #ff9800;
+  border-color: #ff9800;
+}
+
+.status-option[data-status-id="2"]:hover {
+  background-color: #e68900;
+  border-color: #e68900;
+}
+
+/* Cần dọn - Màu đỏ */
+.status-option[data-status-id="4"] {
+  background-color: #f44336;
+  border-color: #f44336;
+}
+
+.status-option[data-status-id="4"]:hover {
+  background-color: #d32f2f;
+  border-color: #d32f2f;
+}
+
+.modal-content .btn-cancel {
+  background-color: #6c757d;
+  color: white;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.modal-content .btn-cancel:hover {
+  background-color: #5a6268;
+}
+
+.modal-content .btn-cancel:active {
+  transform: translateY(1px);
+}
+
+/* Login Page Styles */
+.login-container {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0f2f5;
+}
+
+.login-form-mobile {
+  display: none; /* Hidden by default */
+  background-color: #fff;
+  padding: 32px;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+}
+
+.login-header {
+  margin-bottom: 24px;
+}
+
+.login-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin-bottom: 16px;
+  object-fit: cover;
+}
+
+.login-header h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.login-header p {
+  color: #888;
+  margin-top: 4px;
+}
+
+.form-group-mobile {
+  margin-bottom: 16px;
+}
+
+.form-control-mobile {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #f7f7f7;
+  font-size: 1rem;
+  box-sizing: border-box; /* Ensure padding doesn't affect width */
+}
+
+.btn-login-mobile {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background-color: #ff9800;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-login-mobile:hover {
+  background-color: #e68900;
+}
+
+.login-form-pc {
+  display: block; /* Shown by default */
+}
+
+/* Responsive Media Query */
+@media (max-width: 768px) {
+  .login-form-pc {
+    display: none;
+  }
+
+  .login-form-mobile {
+    display: block;
+  }
+
+  .login-container {
+    background-color: #fff; /* Match staff background on mobile */
+  }
+}

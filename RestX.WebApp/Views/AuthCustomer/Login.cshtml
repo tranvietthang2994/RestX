@@ -1,0 +1,367 @@
+﻿@model RestX.WebApp.Models.ViewModels.LoginViewModel
+@{
+    ViewData["Title"] = "Đăng nhập";
+    Layout = null;
+    var tableId = ViewBag.TableId as int?;
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - RestX.WebApp</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #f4f4f4;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            max-width: 400px;
+            width: 100%;
+            margin: 20px;
+            padding: 30px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .login-header {
+            text-align: left;
+            margin-bottom: 25px;
+        }
+
+            .login-header h1 {
+                font-size: 24px;
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 8px;
+            }
+
+            .login-header p {
+                color: #666;
+                font-size: 14px;
+                margin: 0;
+            }
+
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+            .form-control:focus {
+                border-color: #f0ad4e;
+                outline: none;
+                box-shadow: 0 0 0 2px rgba(240, 173, 78, 0.2);
+            }
+
+            .form-control:read-only {
+                background-color: #f8f9fa;
+                cursor: not-allowed;
+            }
+
+        .text-danger {
+            font-size: 14px;
+            margin-top: 5px;
+            color: #dc3545;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #f0ad4e;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+            .btn-submit:hover {
+                background-color: #ec971f;
+            }
+
+            .btn-submit:disabled {
+                background-color: #ccc;
+                cursor: not-allowed;
+            }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #f0ad4e;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+            .back-link:hover {
+                text-decoration: underline;
+                color: #ec971f;
+            }
+
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        .points-info {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+            .points-info .icon {
+                font-size: 24px;
+                margin-bottom: 8px;
+                display: block;
+            }
+
+            .points-info p {
+                margin: 0;
+                color: #666;
+                font-size: 14px;
+            }
+
+        .d-none {
+            display: none;
+        }
+
+        /* Phone status indicator */
+        .phone-status {
+            font-size: 13px;
+            margin-top: 5px;
+            padding: 0;
+            transition: opacity 0.2s;
+        }
+
+            .phone-status.success {
+                color: #28a745;
+            }
+
+            .phone-status.info {
+                color: #17a2b8;
+            }
+
+            .phone-status.warning {
+                color: #ffc107;
+            }
+
+            .phone-status.loading {
+                color: #6c757d;
+            }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #6c757d;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @@keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @@media (max-width: 480px) {
+            .login-container {
+                margin: 10px;
+                padding: 20px;
+            }
+
+            .login-header h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button type="button" class="btn btn-primary" id="liveToastBtn" hidden>Show live toast</button>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3 top-0 end-0">
+        <div id="liveToast" class="toast broder border-danger bg-white" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-body text-danger">
+                @ViewBag.Message
+            </div>
+        </div>
+    </div>
+
+    <div class="login-container">
+        <a href="@Url.Action("Index", "Home", new { ownerId = Model.OwnerId, tableId = tableId ?? 1 })"
+           class="back-link">← Quay lại trang chủ</a>
+
+        <div class="login-header">
+            <h1>Đăng nhập</h1>
+            <p>Nhập thông tin để tích lũy điểm và nhận ưu đãi</p>
+        </div>
+
+        <div class="points-info">
+            <span class="icon">🎁</span>
+            <p>Đăng nhập để tích lũy điểm và nhận những ưu đãi hấp dẫn!</p>
+        </div>
+
+        <form asp-controller="AuthCustomer" asp-action="Login" asp-route-ownerId="@Model.OwnerId" asp-route-tableId="@(tableId ?? 1)" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="OwnerId" />
+            <input type="hidden" asp-for="ReturnUrl" />
+
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="form-group">
+                <label asp-for="Phone" class="d-none"></label>
+                <input asp-for="Phone" class="form-control" placeholder="Số điện thoại *" type="tel" required id="phoneInput" />
+                <span asp-validation-for="Phone" class="text-danger"></span>
+                <div id="phoneStatus" class="phone-status"></div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Name" class="d-none"></label>
+                <input asp-for="Name" class="form-control" placeholder="Tên của bạn" id="nameInput" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn-submit" id="submitBtn">Tiếp tục</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const phoneInput = document.getElementById('phoneInput');
+            const nameInput = document.getElementById('nameInput');
+            const phoneStatus = document.getElementById('phoneStatus');
+            const submitBtn = document.getElementById('submitBtn');
+            const ownerId = '@Model.OwnerId';
+
+            let phoneCheckTimeout;
+            let isExistingCustomer = false;
+
+            // Handle phone input with debounce
+            phoneInput.addEventListener('input', function() {
+                clearTimeout(phoneCheckTimeout);
+                const phone = this.value.trim();
+
+                // Reset name field when phone changes
+                if (!isExistingCustomer) {
+                    nameInput.value = '';
+                }
+                nameInput.readOnly = false;
+                phoneStatus.innerHTML = '';
+                phoneStatus.className = 'phone-status';
+
+                if (phone.length >= 10) {
+                    phoneCheckTimeout = setTimeout(function() {
+                        checkExistingPhone(phone, ownerId);
+                    }, 800); // Delay 800ms after user stops typing
+                }
+            });
+
+            // Handle form submission
+            submitBtn.addEventListener('click', function() {
+                this.disabled = true;
+                this.innerHTML = 'Đang xử lý...';
+                this.closest('form').submit();
+            });
+
+            // Reset button state on page load
+            window.addEventListener('load', function() {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Tiếp tục';
+            });
+
+            function checkExistingPhone(phone, ownerId) {
+                // Show loading state
+                phoneStatus.innerHTML = '<span class="spinner"></span> Đang kiểm tra...';
+                phoneStatus.className = 'phone-status loading';
+
+                // Make AJAX request to check phone
+                fetch(`/AuthCustomer/CheckPhone/${ownerId}?phone=${encodeURIComponent(phone)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exists) {
+                        // Existing customer - auto-fill name
+                        nameInput.value = data.name;
+                        nameInput.readOnly = true;
+                        phoneStatus.innerHTML = '✓ Khách hàng đã tồn tại';
+                        phoneStatus.className = 'phone-status success';
+                        isExistingCustomer = true;
+                    } else {
+                        // New customer - allow name input
+                        nameInput.value = '';
+                        nameInput.readOnly = false;
+                        nameInput.focus();
+                        phoneStatus.innerHTML = 'ℹ️ Khách hàng mới - vui lòng nhập tên';
+                        phoneStatus.className = 'phone-status info';
+                        isExistingCustomer = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking phone:', error);
+                    phoneStatus.innerHTML = '⚠️ Lỗi kiểm tra - vui lòng thử lại';
+                    phoneStatus.className = 'phone-status warning';
+                    nameInput.readOnly = false;
+                    isExistingCustomer = false;
+                });
+            }
+        });
+
+        const toastTrigger = document.getElementById('liveToastBtn')
+        const toastLiveExample = document.getElementById('liveToast')
+
+        if (toastTrigger) {
+            const toastBootstrap = bootstrap.Toast.getOrCreateInstance(toastLiveExample)
+            toastTrigger.addEventListener('click', () => {
+                toastBootstrap.show()
+            })
+        }
+
+        @if (!string.IsNullOrEmpty(ViewBag.Message as string))
+        {
+            @:toastTrigger.click();
+        }
+    </script>
+</body>
+</html>

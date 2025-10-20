@@ -1,0 +1,51 @@
+﻿@model IEnumerable<RestX.WebApp.Models.ViewModels.TableStatusViewModel>
+@{
+    ViewData["Title"] = "Table Status";
+    Layout = "_StaffLayout";
+}
+
+<div class="page-header">
+    <h1>Table Status</h1>
+</div>
+
+<div class="table-grid">
+    @foreach (var table in Model)
+    {
+        <div id="table-@table.Id" class="table-card @GetTableStatusClass(table.TableStatus.Id)" data-table-id="@table.Id">
+            <div class="table-card-number">@table.TableNumber</div>
+            <div class="table-card-status">@table.TableStatus.Name</div>
+        </div>
+    }
+</div>
+
+<!-- Status Selection Modal -->
+<div id="statusModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <h3 id="modalTableName">Select status for Table X</h3>
+        <div class="status-options">
+            <button class="status-option" data-status-id="1">Available</button>
+            <button class="status-option" data-status-id="2">Occupied</button>
+            @* <button class="status-option" data-status-id="3">Reserved</button> *@
+            <button class="status-option" data-status-id="4">Cleaning</button>
+        </div>
+        <button id="closeModalBtn" class="btn-cancel">Cancel</button>
+    </div>
+</div>
+
+@functions {
+    string GetTableStatusClass(int status)
+    {
+        return status switch
+        {
+            2 => "table-status-occupied",
+            1 => "table-status-available",
+            4 => "table-status-cleaning",
+            3 => "table-status-reserved",
+            _ => ""
+        };
+    }
+}
+
+@section Scripts {
+    <!-- JavaScript is now handled by StaffPageManager -->
+}
