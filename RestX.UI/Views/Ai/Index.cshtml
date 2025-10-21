@@ -1,0 +1,584 @@
+﻿@{
+    ViewData["Title"] = "AI Gợi Ý Món Ăn";
+    var ownerId = ViewBag.OwnerId as Guid?;
+    var tableId = ViewBag.TableId as int?;
+}
+
+<style>
+    .ai-chat-container {
+        max-width: min(800px, 100vw);
+        margin: 2vw auto;
+        padding: 0 0vw;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        min-height: 100vh;
+        box-sizing: border-box;
+    }
+
+    .chat-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 4vw;
+        border-radius: 4vw 4vw 0 0;
+        text-align: center;
+        box-shadow: 0 1vw 3vw rgba(0,0,0,0.15);
+    }
+
+    .chat-header h2 {
+        margin: 0;
+        font-size: clamp(1.2rem, 5vw, 1.8rem);
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    .chat-header p {
+        margin: 2vw 0 0 0;
+        opacity: 0.9;
+        font-size: clamp(0.8rem, 3.5vw, 1rem);
+        line-height: 1.4;
+    }
+
+    .chat-body {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-top: none;
+        min-height: 65vh;
+        max-height: 65vh;
+        overflow-y: auto;
+        padding: 2vh 1vw;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+    }
+
+    .chat-messages {
+        flex: 1;
+        margin-bottom: 4vw;
+        overflow-y: auto;
+        padding-right: 1vw;
+    }
+
+    .message {
+        margin-bottom: 4vw;
+        display: flex;
+        align-items: flex-start;
+        clear: both;
+    }
+
+    .message.user {
+        justify-content: flex-end;
+    }
+
+    .message.ai {
+        justify-content: flex-start;
+    }
+
+    .message-content {
+        max-width: 82%;
+        padding: 3vw 4vw;
+        border-radius: 4vw;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+        line-height: 1.5;
+        font-size: clamp(0.85rem, 3.8vw, 1rem);
+        box-sizing: border-box;
+    }
+
+    .message.user .message-content {
+        background: #007bff;
+        color: white;
+        border-bottom-right-radius: 1vw;
+    }
+
+    .message.ai .message-content {
+        background: #f1f3f4;
+        color: #333;
+        border-bottom-left-radius: 1vw;
+        border: 1px solid #e0e0e0;
+    }
+
+    .message-avatar {
+        width: 9vw;
+        height: 9vw;
+        max-width: 42px;
+        max-height: 42px;
+        min-width: 32px;
+        min-height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: clamp(1rem, 4vw, 1.4rem);
+        margin: 0 2.5vw;
+        flex-shrink: 0;
+    }
+
+    .message.user .message-avatar {
+        background: #007bff;
+        color: white;
+        order: 2;
+    }
+
+    .message.ai .message-avatar {
+        background: #4CAF50;
+        color: white;
+    }
+
+    .chat-input-area {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-top: none;
+        border-radius: 0 0 4vw 4vw;
+        padding: 4vw;
+        box-shadow: 0 -0.5vw 2vw rgba(0,0,0,0.1);
+        box-sizing: border-box;
+    }
+
+    .quick-suggestions {
+        margin-bottom: 4vw;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2vw;
+        justify-content: center;
+    }
+
+    .suggestion-btn {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5vw;
+        padding: 2.5vw 4vw;
+        cursor: pointer;
+        font-size: clamp(0.75rem, 3.2vw, 0.9rem);
+        transition: all 0.2s;
+        color: #495057;
+        white-space: nowrap;
+        touch-action: manipulation;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        box-sizing: border-box;
+    }
+
+    .suggestion-btn:hover {
+        background: #e9ecef;
+        border-color: #adb5bd;
+        text-decoration: none;
+        color: #495057;
+        transform: translateY(-1px);
+    }
+
+    .input-group {
+        display: flex;
+        gap: 3vw;
+        align-items: flex-end;
+    }
+
+    .chat-input {
+        flex: 1;
+        border: 2px solid #e0e0e0;
+        border-radius: 6vw;
+        padding: 3.5vw 5vw;
+        font-size: clamp(0.9rem, 4vw, 1.1rem);
+        resize: none;
+        max-height: 20vh;
+        min-height: 12vw;
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+        line-height: 1.4;
+    }
+
+    .chat-input:focus {
+        outline: none;
+        border-color: #007bff;
+    }
+
+    .send-btn {
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 12vw;
+        height: 12vw;
+        max-width: 54px;
+        max-height: 54px;
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: clamp(1rem, 4.5vw, 1.3rem);
+        touch-action: manipulation;
+        flex-shrink: 0;
+    }
+
+    .send-btn:hover:not(:disabled) {
+        background: #0056b3;
+        transform: scale(1.05);
+    }
+
+    .send-btn:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .typing-indicator {
+        display: none;
+        align-items: center;
+        padding: 3vw 4vw;
+        color: #666;
+        font-style: italic;
+        font-size: clamp(0.8rem, 3.5vw, 0.95rem);
+    }
+
+    .typing-dots {
+        display: inline-block;
+        margin-left: 2vw;
+    }
+
+    .typing-dots span {
+        display: inline-block;
+        width: 1vw;
+        height: 1vw;
+        max-width: 6px;
+        max-height: 6px;
+        min-width: 3px;
+        min-height: 3px;
+        border-radius: 50%;
+        background: #666;
+        margin: 0 0.5vw;
+    }
+
+    .welcome-message {
+        text-align: center;
+        color: #666;
+        padding: 8vw 4vw;
+        border: 2px dashed #e0e0e0;
+        border-radius: 3vw;
+        margin: 4vw 0;
+        box-sizing: border-box;
+    }
+
+    .welcome-message .icon {
+        font-size: clamp(2.5rem, 12vw, 4rem);
+        margin-bottom: 4vw;
+        display: block;
+    }
+
+    .welcome-message h4 {
+        font-size: clamp(1rem, 4.5vw, 1.3rem);
+        margin: 2vw 0;
+        line-height: 1.3;
+    }
+
+    .welcome-message p {
+        font-size: clamp(0.8rem, 3.5vw, 1rem);
+        line-height: 1.5;
+        margin: 2vw 0;
+    }
+
+    .mode-toggle {
+        display: flex;
+        background: #f8f9fa;
+        border-radius: 6vw;
+        padding: 1vw;
+        margin-bottom: 4vw;
+        border: 1px solid #dee2e6;
+        box-sizing: border-box;
+    }
+
+    .mode-btn {
+        flex: 1;
+        background: none;
+        border: none;
+        padding: 2.5vw 3vw;
+        border-radius: 5vw;
+        cursor: pointer;
+        font-size: clamp(0.8rem, 3.5vw, 1rem);
+        transition: all 0.2s;
+        color: #495057;
+        touch-action: manipulation;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .mode-btn.active {
+        background: #007bff;
+        color: white;
+        box-shadow: 0 0.5vw 1vw rgba(0,123,255,0.3);
+    }
+
+    /* Đảm bảo scroll mượt mà */
+    .chat-messages {
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+
+    .chat-body {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Tối ưu hóa cho các thiết bị cảm ứng */
+    .suggestion-btn,
+    .send-btn,
+    .mode-btn {
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+    }
+
+    /* Đảm bảo input area luôn hiển thị */
+    .chat-input-area {
+        position: relative;
+        z-index: 10;
+    }
+
+    .back-btn {
+        display: inline-block;
+        margin: 3vw 0 2vw 0;
+        padding: 2vw 4vw;
+        font-size: clamp(1rem, 4vw, 1.2rem);
+        color: #764ba2;
+        background: #f8f9fa;
+        border: 1px solid #e0e0e0;
+        border-radius: 6vw;
+        text-decoration: none;
+        font-weight: 500;
+        box-shadow: 0 1vw 2vw rgba(0,0,0,0.04);
+        transition: background 0.2s, color 0.2s;
+        position: relative;
+        left: 0;
+    }
+    .back-btn:hover {
+        background: #e9ecef;
+        color: #333;
+    }
+</style>
+
+@if (ownerId.HasValue && tableId.HasValue)
+{
+    <a href="/Home/Index/@ownerId/@tableId" class="back-btn">← Quay lại</a>
+}
+else
+{
+    <a href="/Home/Index" class="back-btn">← Quay lại</a>
+}
+<div class="ai-chat-container">
+    <!-- Header -->
+    <div class="chat-header">
+        <h2>🤖 AI Gợi Ý Món Ăn</h2>
+        <p>Tôi sẽ giúp bạn tìm món ăn phù hợp nhất dựa trên sở thích của bạn!</p>
+    </div>
+
+    <!-- Body -->
+    <div class="chat-body">
+        <!-- Messages -->
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome-message">
+                <span class="icon">🍽️</span>
+                <h4>Chào mừng bạn đến với AI Gợi Ý Món Ăn!</h4>
+                <p>Hãy cho tôi biết bạn muốn ăn gì hôm nay. Ví dụ: "Tôi muốn ăn đồ cay", "Món nào phù hợp cho 2 người", "Đồ ăn nhẹ"...</p>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="message-avatar">🤖</div>
+            <span>AI đang suy nghĩ</span>
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="chat-input-area">
+        <!-- Quick Suggestions -->
+        <div class="quick-suggestions">
+            <span class="suggestion-btn" data-text="Tôi muốn ăn đồ cay">🌶️ Đồ cay</span>
+            <span class="suggestion-btn" data-text="Món nào phù hợp cho 2 người?">👥 Cho 2 người</span>
+            <span class="suggestion-btn" data-text="Tôi muốn ăn nhẹ">🥗 Ăn nhẹ</span>
+            <span class="suggestion-btn" data-text="Món nào ngon nhất?">⭐ Món đặc biệt</span>
+        </div>
+
+        <!-- Input Group -->
+        <div class="input-group">
+            <textarea 
+                class="chat-input" 
+                id="messageInput" 
+                placeholder="Nhập tin nhắn của bạn..."
+                rows="1"></textarea>
+            <button class="send-btn" id="sendButton">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+<script>
+class AiChat {
+    constructor() {
+        this.currentMode = 'suggestion';
+        this.conversationHistory = '';
+        this.initializeElements();
+        this.attachEventListeners();
+    }
+
+    initializeElements() {
+        this.chatMessages = document.getElementById('chatMessages');
+        this.messageInput = document.getElementById('messageInput');
+        this.sendButton = document.getElementById('sendButton');
+        this.typingIndicator = document.getElementById('typingIndicator');
+        this.modeButtons = document.querySelectorAll('.mode-btn');
+        this.suggestionButtons = document.querySelectorAll('.suggestion-btn');
+    }
+
+    attachEventListeners() {
+        // Send message
+        this.sendButton.addEventListener('click', () => this.sendMessage());
+        this.messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.sendMessage();
+            }
+        });
+
+        // Auto-resize textarea
+        this.messageInput.addEventListener('input', () => {
+            this.messageInput.style.height = 'auto';
+            this.messageInput.style.height = this.messageInput.scrollHeight + 'px';
+        });
+
+        // Mode toggle
+        this.modeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.modeButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.currentMode = btn.dataset.mode;
+                this.updatePlaceholder();
+            });
+        });
+
+        // Quick suggestions
+        this.suggestionButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.messageInput.value = btn.dataset.text;
+                this.messageInput.focus();
+            });
+        });
+    }
+
+    updatePlaceholder() {
+        if (this.currentMode === 'suggestion') {
+            this.messageInput.placeholder = 'Ví dụ: "Tôi muốn ăn đồ cay", "Món nào cho 2 người?"...';
+        } else {
+            this.messageInput.placeholder = 'Hỏi bất cứ điều gì về nhà hàng...';
+        }
+    }
+
+    async sendMessage() {
+        const message = this.messageInput.value.trim();
+        if (!message) return;
+
+        // Clear input
+        this.messageInput.value = '';
+        this.messageInput.style.height = 'auto';
+
+        // Remove welcome message if exists
+        const welcomeMsg = this.chatMessages.querySelector('.welcome-message');
+        if (welcomeMsg) {
+            welcomeMsg.remove();
+        }
+
+        // Add user message
+        this.addMessage(message, 'user');
+
+        // Show typing indicator
+        this.showTyping();
+
+        // Disable send button
+        this.sendButton.disabled = true;
+
+        try {
+            const response = await this.callAiApi(message);
+            this.hideTyping();
+            this.addMessage(response, 'ai');
+            
+            // Update conversation history
+            this.conversationHistory += `User: ${message}\nAI: ${response}\n\n`;
+        } catch (error) {
+            this.hideTyping();
+            this.addMessage('Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau. 😔', 'ai');
+            console.error('Error:', error);
+        } finally {
+            this.sendButton.disabled = false;
+        }
+    }
+
+    async callAiApi(message) {
+        const endpoint = this.currentMode === 'suggestion' ? '/Ai/GetSuggestions' : '/Ai/Chat';
+        const requestData = {
+            message: message,
+            conversationHistory: this.conversationHistory
+        };
+
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+            return data.response;
+        } else {
+            throw new Error(data.error || 'Unknown error');
+        }
+    }
+
+    addMessage(content, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        avatar.textContent = sender === 'user' ? '👤' : '🤖';
+
+        const messageContent = document.createElement('div');
+        messageContent.className = 'message-content';
+        messageContent.textContent = content;
+
+        messageDiv.appendChild(avatar);
+        messageDiv.appendChild(messageContent);
+
+        this.chatMessages.appendChild(messageDiv);
+        this.scrollToBottom();
+    }
+
+    showTyping() {
+        this.typingIndicator.style.display = 'flex';
+        this.scrollToBottom();
+    }
+
+    hideTyping() {
+        this.typingIndicator.style.display = 'none';
+    }
+
+    scrollToBottom() {
+        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    }
+}
+
+// Initialize chat when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    new AiChat();
+});
+</script>

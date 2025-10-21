@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestX.API.Services.Interfaces;
 
@@ -5,6 +6,7 @@ namespace RestX.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [AllowAnonymous] // Menu should be accessible to everyone (customers)
     public class MenuController : ControllerBase
     {
         private readonly IMenuService menuService;

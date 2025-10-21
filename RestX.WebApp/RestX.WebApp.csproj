@@ -8,6 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Views\CustomerManagerment\**" />
+    <Content Remove="Views\CustomerManagerment\**" />
+    <EmbeddedResource Remove="Views\CustomerManagerment\**" />
+    <None Remove="Views\CustomerManagerment\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Remove="wwwroot\css\site.css" />
   </ItemGroup>
 
@@ -36,7 +43,6 @@
     <Folder Include="Helpers\" />
     <Folder Include="Hub\" />
     <Folder Include="Migrations\RestXRestaurantManagement\" />
-    <Folder Include="Views\CustomerManagerment\" />
     <Folder Include="wwwroot\microsoft\signalr\" />
     <Folder Include="wwwroot\Uploads\Dishes\" />
   </ItemGroup>

@@ -1,0 +1,68 @@
+﻿@model List<RestX.WebApp.Models.Table>
+
+@{
+    ViewData["Title"] = "Dishes Management";
+    Layout = "~/Views/Shared/_OwnerLayout.cshtml";
+}
+
+<style>
+    .owner-card-container {
+        display: grid;
+        grid-template-columns: 31% 31% 31%;
+        justify-content: space-between;
+        row-gap: 30px;
+    }
+
+    .owner-card-body{
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .owner-card-body label{
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    .owner-card-body img{
+        width: 200px;
+        height: 200px;
+    }
+</style>
+
+<div class="owner-fade-in">
+    <div class="owner-page-header">
+        <h1 class="owner-page-title">
+            <i class="bi bi-cup-hot-fill me-2" style="color: var(--owner-primary);"></i>
+            Table Qr Code
+        </h1>
+        <div class="owner-header-actions">
+            <div class="owner-search-container">
+                <i class="bi bi-search owner-search-icon"></i>
+                <input type="text" class="owner-search-input" id="searchInput" placeholder="Search dishes...">
+            </div>
+        </div>
+    </div>
+    <div class="owner-card-container">
+        @foreach (var item in Model)
+        {
+            <div class="owner-card" data-table-num="@item.TableNumber">
+                <div class="owner-card-body">
+                    <label>Table @item.TableNumber</label>
+                    <img alt="qr test" src="@(Url.Content(item.Qrcode))" />
+                    <a href="@(Url.Content(item.Qrcode))" class="owner-btn owner-btn-primary" download="Table@(item.TableNumber)_qrcode_@(item.OwnerId).png">
+                        <i class="bi bi-qr-code me-2"></i>
+                        Download
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+
+    </script>
+}

@@ -1,14 +1,17 @@
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using QRCoder;
 using RestX.API.Data.Contexts;
 using RestX.API.Data.Repository.Implementations;
 using RestX.API.Data.Repository.Interfaces;
 using RestX.API.Hubs;
+using RestX.API.Models.Configuration;
 using RestX.API.Services.Implementations;
 using RestX.API.Services.Interfaces;
 using RestX.API.Extensions;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,12 +32,82 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1",
         Description = "Restaurant Management System API"
     });
+    
+    // Add JWT Authentication to Swagger
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
 });
+
+// JWT Configuration
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
+
+// JWT Authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.SaveToken = true;
+    options.RequireHttpsMetadata = false; // Set to true in production
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings?.Issuer,
+        ValidAudience = jwtSettings?.Audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.SecretKey ?? "")),
+        ClockSkew = TimeSpan.Zero
+    };
+
+    // Handle JWT in SignalR
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/signalrServer"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
+});
+
+builder.Services.AddAuthorization();
 
 // HTTP Context
 builder.Services.AddHttpContextAccessor();
 
-// Session (if needed for API)
+// Session (optional for API, mainly for SignalR)
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -70,6 +143,9 @@ builder.Services.AddScoped<QRCodeGenerator>();
 builder.Services.AddScoped<IAiService, AiService>();
 builder.Services.AddHttpClient<IAiService, AiService>();
 
+// JWT Service
+builder.Services.AddScoped<IJwtService, JwtService>();
+
 // Database Configuration
 builder.Services.AddDbContext<RestXRestaurantManagementContext>(options =>
 {
@@ -92,13 +168,7 @@ builder.Services.AddDbContext<RestXRestaurantManagementContext>(options =>
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
 
-// Authentication (JWT for API - will be configured later)
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-.AddCookie(options =>
-{
-    options.LoginPath = "/api/auth/login";
-    options.ExpireTimeSpan = TimeSpan.FromDays(1);
-});
+// Note: JWT Authentication already configured above
 
 // File upload configuration
 builder.Services.Configure<FormOptions>(options =>

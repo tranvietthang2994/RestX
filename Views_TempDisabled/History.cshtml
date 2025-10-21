@@ -1,0 +1,130 @@
+﻿@model List<RestX.WebApp.Models.ViewModels.CartViewModel>
+<link rel="stylesheet" href="~/css/index.css" />
+
+<style>
+    .page-title{
+        color: #ff9800;
+    }
+
+    .order-items {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 2px 8px #f3f3f3;
+        padding: 10px 12px;
+        transition: box-shadow 0.18s;
+    }
+
+    .order-items:active {
+        box-shadow: 0 2px 12px #e0e0e0;
+    }
+
+    .item-row {
+        display: flex;
+        align-items: center;
+        margin-top: 15px;
+    }
+
+    .item-image {
+        width: 60px;
+        height: 60px;
+        background-color: #ddd;
+        border-radius: 8px;
+        margin-right: 12px;
+    }
+
+    .item-info {
+        flex: 1;
+    }
+
+        .item-info p {
+            margin: 3px 0;
+        }
+
+    .edit-link {
+        color: rgb(247, 148, 30);
+        font-size: 14px;
+        cursor: pointer;
+    }
+
+    .input-number span {
+        border: solid 1px #F4F4F4;
+        color: #A4A4A4;
+        display: flex;
+        width: 14px;
+        height: 14px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 3px;
+    }
+
+    .input-number p {
+        display: flex;
+        height: fit-content;
+    }
+
+    .input-number button {
+        border: 1px solid rgb(247, 148, 30);
+        border-radius: 5px;
+        background-color: #00000000;
+        color: rgb(247, 148, 30);
+    }
+
+    .total{
+        color: red;
+        font-size: 20px;
+        font-weight: bold;
+        text-align: end;
+    }
+</style>
+
+<div class="container-mobile">
+    <!-- Search bar and home icon -->
+    <div style="display:flex;align-items:center;padding:12px 8px 0 8px;" class="mb-5">
+        <a href="/Home/Index/@Model[0].OwnerId/@Model[0].TableId" style="font-size:1.3rem;color:#ff9800;margin-right:8px;display:inline-block;text-decoration:none; z-index: 3;">🏠</a>
+        <h1 class="position-absolute start-0 page-title m-0 w-100 text-center">History Order</h1>
+    </div>
+
+    <div>
+        @foreach (var cart in Model)
+        {
+            @if (cart.DishList.Count() > 0)
+            {
+                <div class="order-items mb-5">
+                    <h4>@cart.Time.Value.ToString("dd-MM-yyyy HH:mm")</h4>
+                    @foreach (var dish in cart.DishList)
+                    {
+                        <div class="item-row" dish-id="@dish.DishId">
+                            <img src="@(Url.Content(dish.ImgUrl))" class="item-image" />
+                            <div class="item-info">
+                                <p dish-name="@dish.DishName">@dish.Quantity × @dish.DishName</p>
+                                <p dish-price="@dish.Price">@((dish.Price * dish.Quantity).ToString("N0")) đ</p>
+                            </div>
+                        </div>
+                    }
+                    <div class="total">
+                        Total: <span>---</span> đ
+                    </div>
+                </div>
+            }
+            
+        }
+        
+    </div>
+</div>
+
+<script src="~/microsoft/signalr/dist/browser/signalr.js"></script>
+<script src="~/js/site.js"></script>
+<script>
+
+    loadTotal();
+    function loadTotal(){
+            Array.from(document.getElementsByClassName("order-items")).forEach(item =>
+        {
+            var totalPrice = 0;
+            Array.from(item.getElementsByClassName("item-info")).forEach(price => {
+                totalPrice += Number(price.lastElementChild.getAttribute("dish-price"));
+            });
+            item.lastElementChild.querySelector("span").textContent = totalPrice;
+        });
+    }
+</script>

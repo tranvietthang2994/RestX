@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>@ViewData["Title"] - Staff</title>
+    <link rel="stylesheet" href="~/css/staff.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="~/microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script src="~/js/staff-page-manager.js" asp-append-version="true"></script>
+</head>
+<body>
+    <main id="main-content">
+        <div class="container-mobile">
+            @RenderBody()
+        </div>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="/Staff/StatusTable" class="nav-item">
+            <i class="fa-solid fa-chair"></i>
+            <span>Tables</span>
+        </a>
+        <a href="/Staff/Menu" class="nav-item">
+            <i class="fa-solid fa-book-open"></i>
+            <span>Menu</span>
+        </a>
+        <a href="/Staff/CustomerRequest" class="nav-item">
+            <i class="fa-solid fa-bell"></i>
+            <span>Requests</span>
+        </a>
+        <a href="/Staff/Profile" class="nav-item">
+            <i class="fa-solid fa-user"></i>
+            <span>Profile</span>
+        </a>
+    </nav>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const mainContent = document.getElementById('main-content');
+            const nav = document.querySelector('.bottom-nav');
+            const parser = new DOMParser();
+
+            const setActiveLink = (path) => {
+                const navLinks = nav.querySelectorAll('a');
+                let anyActive = false;
+                navLinks.forEach(link => {
+                    const linkPath = link.getAttribute('href');
+                    if (path.toLowerCase().startsWith(linkPath.toLowerCase())) {
+                        link.classList.add('active');
+                        anyActive = true;
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
+                 if (!anyActive && navLinks.length > 0) {
+                     const defaultPath = '/Staff/StatusTable';
+                     if (path.toLowerCase().startsWith('/staff')) {
+                        navLinks.forEach(link => {
+                            const linkPath = link.getAttribute('href');
+                            if (linkPath.toLowerCase() === defaultPath.toLowerCase()) {
+                                 link.classList.add('active');
+                            }
+                        });
+                     }
+                 }
+            };
+
+            const loadContent = async (url, pushState = true) => {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        console.error('Failed to load page');
+                        window.location.href = url; // fallback
+                        return;
+                    }
+                    const html = await response.text();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    const newContent = doc.querySelector('.container-mobile');
+                    const newTitle = doc.querySelector('title').innerText;
+
+                    if (newContent) {
+                        mainContent.innerHTML = ''; // Clear old content
+                        mainContent.appendChild(newContent);
+                        document.title = newTitle;
+                        if (pushState) {
+                            history.pushState({ path: url }, '', url);
+                        }
+                        setActiveLink(url);
+                        
+                        // Reinitialize page-specific JavaScript
+                        if (window.StaffPageManager) {
+                            window.StaffPageManager.reinitializePage(url);
+                        }
+                    } else {
+                        window.location.href = url; // fallback
+                    }
+                } catch (error) {
+                    console.error('Error loading page:', error);
+                    window.location.href = url; // fallback
+                }
+            };
+
+            nav.addEventListener('click', (e) => {
+                const link = e.target.closest('a');
+                if (link) {
+                    e.preventDefault();
+                    const path = link.getAttribute('href');
+                    if (path !== window.location.pathname) {
+                        loadContent(path);
+                    }
+                }
+            });
+
+            window.addEventListener('popstate', (e) => {
+                if (e.state && e.state.path) {
+                    loadContent(e.state.path, false);
+                }
+            });
+
+            // Event delegation for dynamically loaded content
+            document.body.addEventListener('click', (e) => {
+                // QR Modal on Profile page
+                if (e.target.id === 'show-qr-btn') {
+                    const qrModal = document.getElementById('qrModal');
+                    if(qrModal) qrModal.style.display = 'flex';
+                }
+                if (e.target.classList.contains('modal-close') || e.target.classList.contains('modal-overlay')) {
+                    const qrModal = document.getElementById('qrModal');
+                    if(qrModal) qrModal.style.display = 'none';
+                }
+
+                // Confirm/Cancel on Request page
+                if (e.target.classList.contains('btn-confirm') || e.target.classList.contains('btn-cancel')) {
+                     const requestCard = e.target.closest('.request-card');
+                     if(requestCard) {
+                         requestCard.style.opacity = '0.5';
+                         // Here you would add logic to handle the request via API
+                         console.log(`${e.target.textContent.trim()} on ${requestCard.querySelector('.table-number').textContent}`);
+                     }
+                }
+            });
+
+            // Set initial state
+            history.replaceState({ path: window.location.pathname }, '', window.location.pathname);
+            setActiveLink(window.location.pathname);
+            
+            // Initialize current page
+            if (window.StaffPageManager) {
+                window.StaffPageManager.reinitializePage(window.location.pathname);
+            }
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html> 

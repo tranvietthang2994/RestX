@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using RestX.API.Hubs;
@@ -8,6 +9,7 @@ namespace RestX.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Customer")] // Cart operations for customers
     public class CartController : ControllerBase
     {
         private readonly ICartService cartService;

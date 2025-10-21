@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestX.API.Models.DTOs.Request;
 using RestX.API.Services.Interfaces;
@@ -7,6 +8,7 @@ namespace RestX.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Owner,Staff")] // Only Owner and Staff can manage categories
     public class CategoryController : ControllerBase
     {
         private readonly ICategoryService categoryService;

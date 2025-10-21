@@ -17,5 +17,20 @@ namespace RestX.API.Services.Implementations
                 includeProperties: "Staff,Owner"
                 );
         }
+
+        public async Task<Account?> LoginAsync(string username, string password)
+        {
+            try
+            {
+                return await Repo.GetFirstAsync<Account>(
+                    filter: acc => acc.Username == username && acc.Password == password,
+                    includeProperties: "Staff,Owner"
+                );
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 }

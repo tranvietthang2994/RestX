@@ -91,9 +91,46 @@ namespace RestX.API.Services.Implementations
             return newCustomer;
         }
 
-        public Task<Customer> FindCustomerByPhoneAsync(LoginViewModel model, CancellationToken cancellationToken = default)
+        public async Task<Customer?> LoginOrCreateCustomerAsync(string name, string phone)
         {
-            throw new NotImplementedException();
+            try
+            {
+                // For JWT, we'll use a default owner ID from UserHelper or create a generic approach
+                var ownerId = RestX.API.Extensions.UserHelper.GetCurrentOwnerId();
+                
+                var customer = await FindCustomerByPhoneAsync(phone, ownerId);
+                if (customer != null)
+                {
+                    // Update name if different
+                    if (customer.Name != name)
+                    {
+                        customer.Name = name;
+                        customer.ModifiedDate = DateTime.UtcNow;
+                        Repo.Update<Customer>(customer, customer.Id.ToString());
+                    }
+                    return customer;
+                }
+
+                // Create new customer
+                var newCustomer = new Customer
+                {
+                    Id = Guid.NewGuid(),
+                    OwnerId = ownerId,
+                    Name = name,
+                    Phone = phone,
+                    Point = 0,
+                    IsActive = true,
+                    CreatedDate = DateTime.UtcNow,
+                    ModifiedDate = null
+                };
+
+                await Repo.CreateAsync<Customer>(newCustomer, newCustomer.Id.ToString());
+                return newCustomer;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

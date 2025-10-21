@@ -1,0 +1,76 @@
+﻿@model RestX.WebApp.Models.ViewModels.MenuViewModel
+@{
+    ViewData["Title"] = "Menu";
+    Layout = "_StaffLayout";
+}
+
+<div class="menu-container">
+    <div class="page-header">
+        <h1>Menu & Status</h1>
+    </div>
+
+    <div class="search-bar-staff">
+        <input type="text" id="searchInput" placeholder="Search dishes..." />
+    </div>
+
+    @foreach (var category in Model.Categories)
+    {
+        <div class="menu-section-staff" data-category="@category.Id">
+            <div class="menu-section-title-staff">@category.CategoryName</div>
+            @foreach (var dish in category.Dishes)
+            {
+                <div class="menu-dish-card-staff" data-dish-id="@dish.Id" data-dish-name="@dish.Name.ToLower()">
+                    <img class="menu-dish-img-staff" src="@(Url.Content(dish.ImageUrl))" alt="@dish.Name" />
+                    <div class="menu-dish-info-staff">
+                        <div class="menu-dish-name-staff">@dish.Name</div>
+                        @if (!string.IsNullOrEmpty(dish.Description))
+                        {
+                            <div class="menu-dish-desc-staff">@dish.Description</div>
+                        }
+                        <div class="menu-dish-price-staff">@dish.Price.ToString("N0") đ</div>
+                    </div>
+                    <div class="availability-toggle @(dish.IsActive == false ? "off" : "")" data-dish-id="@dish.Id">
+                        <span>@(dish.IsActive == false ? "Out of Stock" : "Available")</span>
+                        <i class="fa-solid @(dish.IsActive == false ? "fa-toggle-off" : "fa-toggle-on")"></i>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- JavaScript is now handled by StaffPageManager -->
+
+<style>
+    .menu-dish-desc-staff {
+        font-size: 0.9rem;
+        color: #666;
+        margin: 2px 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .menu-dish-card-staff[style*="display: none"] {
+        display: none !important;
+    }
+    
+    .availability-toggle {
+        cursor: pointer;
+        transition: color 0.2s ease;
+        user-select: none;
+    }
+    
+    .availability-toggle:hover {
+        opacity: 0.8;
+    }
+    
+    .search-bar-staff input {
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .search-bar-staff input:focus {
+        border-color: #ff9800;
+        box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2);
+    }
+</style>

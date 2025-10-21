@@ -8,5 +8,6 @@ namespace RestX.API.Services.Interfaces
     {
         Task<Customer> LoginOrCreateAsync(LoginViewModel model, CancellationToken cancellationToken = default);
         Task<Customer?> FindCustomerByPhoneAsync(string phone, Guid ownerId, CancellationToken cancellationToken = default);
+        Task<Customer?> LoginOrCreateCustomerAsync(string name, string phone);
     }
 }

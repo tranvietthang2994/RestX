@@ -1,0 +1,664 @@
+﻿@model RestX.WebApp.Models.ViewModels.StaffManagementViewModel
+
+@{
+    ViewData["Title"] = "Staff Management";
+    Layout = "~/Views/Shared/_OwnerLayout.cshtml";
+}
+
+<div class="owner-fade-in">
+    <div class="owner-page-header">
+        <h1 class="owner-page-title">
+            <i class="bi bi-people-fill me-2" style="color: var(--owner-primary);"></i>
+            Staff Management
+        </h1>
+        <div class="owner-header-actions">
+            <div class="owner-search-container">
+                <i class="bi bi-search owner-search-icon"></i>
+                <input type="text" class="owner-search-input" id="searchInput" placeholder="Search staff...">
+            </div>
+            <button class="owner-btn owner-btn-primary" id="btnAddStaff" data-bs-toggle="modal" data-bs-target="#staffModal">
+                <i class="bi bi-plus-lg"></i>
+                Add Staff
+            </button>
+        </div>
+    </div>
+
+    <div class="owner-card">
+        <div class="owner-card-body">
+            <div class="table-responsive">
+                <table class="owner-table table" id="staffTable">
+                    <thead>
+                        <tr>
+                            <th scope="col">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span>
+                                        <i class="bi bi-person me-1"></i>
+                                        Staff Name
+                                    </span>
+                                    <button class="btn btn-sm btn-link p-0 text-muted sort-btn"
+                                            data-sort="name"
+                                            data-direction="asc"
+                                            title="Sort by Name">
+                                        <i class="bi bi-arrow-down-up" style="font-size: 0.8rem;"></i>
+                                    </button>
+                                </div>
+                            </th>
+                            <th scope="col">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span>
+                                        <i class="bi bi-envelope me-1"></i>
+                                        Email
+                                    </span>
+                                    <button class="btn btn-sm btn-link p-0 text-muted sort-btn"
+                                            data-sort="email"
+                                            data-direction="asc"
+                                            title="Sort by Email">
+                                        <i class="bi bi-arrow-down-up" style="font-size: 0.8rem;"></i>
+                                    </button>
+                                </div>
+                            </th>
+                            <th scope="col">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span>
+                                        <i class="bi bi-telephone me-1"></i>
+                                        Phone
+                                    </span>
+                                    <button class="btn btn-sm btn-link p-0 text-muted sort-btn"
+                                            data-sort="phone"
+                                            data-direction="asc"
+                                            title="Sort by Phone">
+                                        <i class="bi bi-arrow-down-up" style="font-size: 0.8rem;"></i>
+                                    </button>
+                                </div>
+                            </th>
+                            <th scope="col">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span>
+                                        <i class="bi bi-person-badge me-1"></i>
+                                        Username
+                                    </span>
+                                    <button class="btn btn-sm btn-link p-0 text-muted sort-btn"
+                                            data-sort="username"
+                                            data-direction="asc"
+                                            title="Sort by Username">
+                                        <i class="bi bi-arrow-down-up" style="font-size: 0.8rem;"></i>
+                                    </button>
+                                </div>
+                            </th>
+                            <th scope="col">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span>
+                                        <i class="bi bi-toggle-on me-1"></i>
+                                        Status
+                                    </span>
+                                    <button class="btn btn-sm btn-link p-0 text-muted sort-btn"
+                                            data-sort="status"
+                                            data-direction="asc"
+                                            title="Sort by Status">
+                                        <i class="bi bi-arrow-down-up" style="font-size: 0.8rem;"></i>
+                                    </button>
+                                </div>
+                            </th>
+                            <th scope="col" class="text-center">
+                                <i class="bi bi-gear me-1"></i>
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Staffs != null && Model.Staffs.Any())
+                        {
+                            foreach (var staff in Model.Staffs)
+                            {
+                                <tr class="staff-row owner-slide-in">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            @if (!string.IsNullOrEmpty(staff.ImageUrl))
+                                            {
+                                                <img src="@(Url.Content(staff.ImageUrl))" class="rounded-circle me-3" width="48" height="48" style="object-fit: cover;" alt="@staff.Name">
+                                            }
+                                            else
+                                            {
+                                                <div class="avatar-circle me-3">
+                                                    <i class="bi bi-person-fill"></i>
+                                                </div>
+                                            }
+                                            <div>
+                                                <div class="fw-bold">@staff.Name</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="text-muted">@staff.Email</div>
+                                    </td>
+                                    <td>
+                                        <div class="text-muted">@staff.Phone</div>
+                                    </td>
+                                    <td>
+                                        <span class="owner-badge owner-badge-info">@staff.Username</span>
+                                    </td>
+                                    <td>
+                                        @if (staff.IsActive == true)
+                                        {
+                                            <span class="owner-badge owner-badge-success">
+                                                <i class="bi bi-check-circle me-1"></i>
+                                                Active
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="owner-badge owner-badge-danger">
+                                                <i class="bi bi-x-circle me-1"></i>
+                                                Inactive
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="owner-action-buttons">
+                                            <button class="owner-btn-action owner-btn-detail" title="View Details" onclick="viewStaff('@staff.Id')">
+                                                <i class="bi bi-eye-fill"></i>
+                                            </button>
+                                            <button class="owner-btn-action owner-btn-edit" title="Edit Staff" onclick="editStaff('@staff.Id')">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                            <button class="owner-btn-action owner-btn-delete" title="Delete Staff" onclick="deleteStaff('@staff.Id', '@staff.Name')">
+                                                <i class="bi bi-trash3-fill"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr id="noStaffRow">
+                                <td colspan="6">
+                                    <div class="text-center py-5">
+                                        <i class="bi bi-people" style="font-size: 3rem; color: var(--owner-text-muted);"></i>
+                                        <p class="mt-3 text-muted">No staff members have been created yet</p>
+                                        <button class="owner-btn owner-btn-primary" onclick="showStaffModal('Add New Staff')">
+                                            <i class="bi bi-plus-lg"></i>
+                                            Add Your First Staff
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="noSearchResults" class="text-center py-5" style="display: none;">
+                <i class="bi bi-search" style="font-size: 3rem; color: var(--owner-text-muted);"></i>
+                <p class="mt-3 text-muted">No matching staff found</p>
+                <small class="text-muted">Try adjusting your filters or search criteria</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Staff Modal -->
+<div class="modal fade" id="staffModal" tabindex="-1" aria-labelledby="staffModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="border-radius: var(--owner-radius); border: none; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--owner-border); background: var(--owner-bg-light);">
+                <h5 class="modal-title" id="staffModalLabel">
+                    <i class="bi bi-plus-circle me-2" style="color: var(--owner-primary);"></i>
+                    Add New Staff
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="staffForm" enctype="multipart/form-data">
+                <div class="modal-body" style="padding: 2rem;">
+                    <input type="hidden" id="staffId" name="Id" value="">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="staffName" class="owner-form-label">
+                                <i class="bi bi-person me-1"></i>
+                                Staff Name *
+                            </label>
+                            <input type="text" class="owner-form-control" id="staffName" name="Name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="staffEmail" class="owner-form-label">
+                                <i class="bi bi-envelope me-1"></i>
+                                Email *
+                            </label>
+                            <input type="email" class="owner-form-control" id="staffEmail" name="Email" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="staffPhone" class="owner-form-label">
+                                <i class="bi bi-telephone me-1"></i>
+                                Phone *
+                            </label>
+                            <input type="tel" class="owner-form-control" id="staffPhone" name="Phone" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="staffUsername" class="owner-form-label">
+                                <i class="bi bi-person-badge me-1"></i>
+                                Username *
+                            </label>
+                            <input type="text" class="owner-form-control" id="staffUsername" name="Username" required>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label for="staffPassword" class="owner-form-label">
+                                <i class="bi bi-lock me-1"></i>
+                                Password *
+                            </label>
+                            <input type="password" class="owner-form-control" id="staffPassword" name="Password" required>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label for="imageFile" class="owner-form-label">
+                                <i class="bi bi-image me-1"></i>
+                                Staff Avatar
+                            </label>
+                            <div class="image-upload-container">
+                                <div class="image-preview" id="imagePreview" style="display: none;">
+                                    <img id="previewImg" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: var(--owner-radius-small); object-fit: cover;">
+                                    <button type="button" class="btn btn-danger btn-sm mt-2" onclick="removeImage()">
+                                        <i class="bi bi-x-circle"></i>
+                                        Remove Image
+                                    </button>
+                                </div>
+                                <div class="file-upload-area" id="fileUploadArea" style="border: 2px dashed var(--owner-border); border-radius: var(--owner-radius-small); padding: 2rem; text-align: center; cursor: pointer; transition: all 0.3s ease;">
+                                    <input type="file" class="owner-form-control" id="imageFile" name="ImageFile" accept="image/*" style="display: none;" onchange="handleImageUpload(this)">
+                                    <div class="upload-placeholder" onclick="document.getElementById('imageFile').click()">
+                                        <i class="bi bi-cloud-upload" style="font-size: 2rem; color: var(--owner-primary);"></i>
+                                        <p class="mt-2 mb-1 fw-bold">Click to upload staff avatar</p>
+                                        <small class="text-muted">JPG, PNG, GIF, WEBP (Max 5MB) - Optional</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-12 mb-2">
+                            <div class="owner-form-group d-flex align-items-center" style="gap: 12px;">
+                                <label class="owner-switch mb-0">
+                                    <input type="checkbox" id="isActive" name="IsActive" checked>
+                                    <span class="owner-slider"></span>
+                                </label>
+                                <label class="form-check-label mb-0" for="isActive" style="font-weight: 400; font-size: 1.05rem;">
+                                    Active Status
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--owner-border); background: var(--owner-bg-light);">
+                    <button type="button" class="owner-btn owner-btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i>
+                        Cancel
+                    </button>
+                    <button type="submit" class="owner-btn owner-btn-primary" id="btnSaveStaff">
+                        <i class="bi bi-check-lg"></i>
+                        Save Staff
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .avatar-circle {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: var(--owner-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+</style>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        let allStaffs = [];
+
+        document.addEventListener('DOMContentLoaded', function () {
+            bindFormEvents();
+            bindSortEvents();
+            initializeStaffData();
+        });
+
+        function initializeStaffData() {
+            const rows = document.querySelectorAll('#staffTable tbody tr.staff-row');
+            allStaffs = Array.from(rows);
+        }
+
+        function bindSortEvents() {
+            const sortButtons = document.querySelectorAll('.sort-btn');
+            sortButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const sortType = this.getAttribute('data-sort');
+                    const currentDirection = this.getAttribute('data-direction');
+                    const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+
+                    sortButtons.forEach(btn => {
+                        if (btn !== this) {
+                            btn.setAttribute('data-direction', 'asc');
+                            btn.querySelector('i').className = 'bi bi-arrow-down-up';
+                            btn.classList.remove('text-primary');
+                            btn.classList.add('text-muted');
+                        }
+                    });
+
+                    this.setAttribute('data-direction', newDirection);
+                    this.classList.remove('text-muted');
+                    this.classList.add('text-primary');
+
+                    const icon = this.querySelector('i');
+                    if (newDirection === 'asc') {
+                        icon.className = 'bi bi-sort-alpha-down';
+                    } else {
+                        icon.className = 'bi bi-sort-alpha-up';
+                    }
+
+                    sortTable(sortType, newDirection);
+                });
+            });
+        }
+
+        function sortTable(sortType, direction) {
+            const tbody = document.querySelector('#staffTable tbody');
+            const visibleRows = allStaffs.filter(row => row.style.display !== 'none');
+
+            visibleRows.sort((a, b) => {
+                let valueA, valueB;
+
+                switch(sortType) {
+                    case 'name':
+                        valueA = a.querySelector('td:nth-child(1) .fw-bold')?.textContent.trim().toLowerCase() || '';
+                        valueB = b.querySelector('td:nth-child(1) .fw-bold')?.textContent.trim().toLowerCase() || '';
+                        break;
+                    case 'email':
+                        valueA = a.querySelector('td:nth-child(2)')?.textContent.trim().toLowerCase() || '';
+                        valueB = b.querySelector('td:nth-child(2)')?.textContent.trim().toLowerCase() || '';
+                        break;
+                    case 'phone':
+                        valueA = a.querySelector('td:nth-child(3)')?.textContent.trim().toLowerCase() || '';
+                        valueB = b.querySelector('td:nth-child(3)')?.textContent.trim().toLowerCase() || '';
+                        break;
+                    case 'username':
+                        valueA = a.querySelector('td:nth-child(4)')?.textContent.trim().toLowerCase() || '';
+                        valueB = b.querySelector('td:nth-child(4)')?.textContent.trim().toLowerCase() || '';
+                        break;
+                    case 'status':
+                        valueA = a.querySelector('td:nth-child(5) .owner-badge')?.classList.contains('owner-badge-success') ? 1 : 0;
+                        valueB = b.querySelector('td:nth-child(5) .owner-badge')?.classList.contains('owner-badge-success') ? 1 : 0;
+                        break;
+                    default:
+                        return 0;
+                }
+
+                if (sortType === 'status') {
+                    return direction === 'asc' ? valueA - valueB : valueB - valueA;
+                } else {
+                    if (direction === 'asc') {
+                        return valueA.localeCompare(valueB);
+                    } else {
+                        return valueB.localeCompare(valueA);
+                    }
+                }
+            });
+
+            const allRows = tbody.querySelectorAll('tr');
+            allRows.forEach(row => {
+                if (row.classList.contains('staff-row')) {
+                    row.remove();
+                }
+            });
+
+            visibleRows.forEach(row => {
+                tbody.appendChild(row);
+            });
+
+            const noStaffRow = document.getElementById('noStaffRow');
+            if (noStaffRow && !noStaffRow.parentNode) {
+                tbody.appendChild(noStaffRow);
+            }
+        }
+
+        document.getElementById('searchInput').addEventListener('input', function () {
+            const keyword = this.value.trim().toLowerCase();
+            const rows = document.querySelectorAll('#staffTable tbody tr.staff-row');
+            let found = 0;
+
+            rows.forEach(row => {
+                const name = row.querySelector('td:nth-child(1) .fw-bold')?.textContent.toLowerCase() || '';
+                const email = row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
+                const phone = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
+                const username = row.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
+
+                if (name.includes(keyword) || email.includes(keyword) || phone.includes(keyword) || username.includes(keyword)) {
+                    row.style.display = '';
+                    found++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            const noStaffRow = document.getElementById('noStaffRow');
+            if (noStaffRow) noStaffRow.style.display = found === 0 && keyword === '' ? '' : 'none';
+
+            document.getElementById('noSearchResults').style.display = (found === 0 && keyword !== '') ? '' : 'none';
+        });
+
+        async function handleImageUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                Swal.fire('Error', 'Image size cannot exceed 5MB!', 'error');
+                input.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('imagePreview').style.display = 'block';
+                document.getElementById('previewImg').src = e.target.result;
+                document.getElementById('fileUploadArea').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage() {
+            document.getElementById('imageFile').value = '';
+            document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('previewImg').src = '';
+            document.getElementById('fileUploadArea').style.display = 'block';
+        }
+
+        function bindFormEvents() {
+            document.getElementById('staffForm').onsubmit = async function (e) {
+                e.preventDefault();
+                await saveStaff();
+            };
+        }
+
+        function showStaffModal(title, staff = null) {
+            document.getElementById('staffModalLabel').innerHTML = `<i class="bi bi-plus-circle me-2" style="color: var(--owner-primary);"></i> ${title}`;
+            resetStaffForm();
+            if (staff) fillStaffForm(staff);
+            const staffModal = new bootstrap.Modal(document.getElementById('staffModal'));
+            staffModal.show();
+        }
+
+        function resetStaffForm() {
+            document.getElementById('staffId').value = '';
+            document.getElementById('staffName').value = '';
+            document.getElementById('staffEmail').value = '';
+            document.getElementById('staffPhone').value = '';
+            document.getElementById('staffUsername').value = '';
+            document.getElementById('staffPassword').value = '';
+            document.getElementById('isActive').checked = true;
+            removeImage();
+        }
+
+        function fillStaffForm(staff) {
+            document.getElementById('staffId').value = staff.id;
+            document.getElementById('staffName').value = staff.name;
+            document.getElementById('staffEmail').value = staff.email;
+            document.getElementById('staffPhone').value = staff.phone;
+            document.getElementById('staffUsername').value = staff.username;
+            document.getElementById('staffPassword').value = '';
+            document.getElementById('isActive').checked = staff.isActive;
+
+            // Handle existing image
+            if (staff.imageUrl) {
+                document.getElementById('imagePreview').style.display = 'block';
+                document.getElementById('previewImg').src = staff.imageUrl;
+                document.getElementById('fileUploadArea').style.display = 'none';
+            } else {
+                removeImage();
+            }
+        }
+
+        // ========== SỬA CÁC API CALLS ĐỂ TRỎ ĐÚNG CONTROLLER ==========
+        async function saveStaff() {
+            const formData = new FormData();
+            const form = document.getElementById('staffForm');
+
+            // Add all form fields
+            const id = document.getElementById('staffId').value;
+            const name = document.getElementById('staffName').value.trim();
+            const email = document.getElementById('staffEmail').value.trim();
+            const phone = document.getElementById('staffPhone').value.trim();
+            const username = document.getElementById('staffUsername').value.trim();
+            const password = document.getElementById('staffPassword').value;
+            const isActive = document.getElementById('isActive').checked;
+            const imageFile = document.getElementById('imageFile').files[0];
+
+            if (!name || !email || !phone || !username || !password) {
+                Swal.fire('Error', 'Please fill in all required fields!', 'error');
+                return;
+            }
+
+            if (id) formData.append('Id', id);
+            formData.append('Name', name);
+            formData.append('Email', email);
+            formData.append('Phone', phone);
+            formData.append('Username', username);
+            formData.append('Password', password);
+            formData.append('IsActive', isActive);
+
+            if (imageFile) {
+                formData.append('ImageFile', imageFile);
+            }
+
+            // SỬA: Thay đổi từ '/Owner/Staff/Upsert' thành '/StaffManagement/Upsert'
+            const url = '/StaffManagement/Upsert';
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    Swal.fire('Success', result.message, 'success').then(() => location.reload());
+                } else {
+                    const errorMessage = result.errors
+                        ? (Array.isArray(result.errors) ? result.errors.join('\n') : result.errors)
+                        : result.message || 'Cannot save staff!';
+                    Swal.fire('Error', errorMessage, 'error');
+                }
+            } catch (error) {
+                console.error('Error saving staff:', error);
+                Swal.fire('Error', 'An error occurred while saving staff!', 'error');
+            }
+        }
+
+        async function viewStaff(id) {
+            try {
+                // SỬA: Thay đổi từ '/Owner/Staff/Detail/' thành '/StaffManagement/Detail/'
+                const response = await fetch(`/StaffManagement/Detail/${id}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const staff = result.data;
+                    const avatarHtml = staff.imageUrl
+                        ? `<img src="${staff.imageUrl}" alt="${staff.name}" style="max-width:200px;max-height:200px;border-radius:8px;object-fit:cover;">`
+                        : `<div class="avatar-circle mx-auto" style="width: 100px; height: 100px; font-size: 3rem;"><i class="bi bi-person-fill"></i></div>`;
+
+                    const html = `
+                        <div class="text-center mb-3">
+                            ${avatarHtml}
+                        </div>
+                        <table class="table table-bordered">
+                            <tr><th>Staff Name</th><td>${staff.name}</td></tr>
+                            <tr><th>Email</th><td>${staff.email}</td></tr>
+                            <tr><th>Phone</th><td>${staff.phone}</td></tr>
+                            <tr><th>Username</th><td>${staff.username}</td></tr>
+                            <tr><th>Status</th><td>${staff.isActive ? 'Active' : 'Inactive'}</td></tr>
+                        </table>
+                    `;
+                    Swal.fire({
+                        title: 'Staff Details',
+                        html: html,
+                        width: 600,
+                        showCloseButton: true,
+                        confirmButtonText: 'Close'
+                    });
+                } else {
+                    Swal.fire('Error', result.message || 'Staff not found!', 'error');
+                }
+            } catch (error) {
+                console.error('Error viewing staff:', error);
+                Swal.fire('Error', 'An error occurred while loading staff details!', 'error');
+            }
+        }
+
+        async function editStaff(id) {
+            try {
+                // SỬA: Thay đổi từ '/Owner/Staff/Detail/' thành '/StaffManagement/Detail/'
+                const response = await fetch(`/StaffManagement/Detail/${id}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    showStaffModal('Edit Staff', result.data);
+                } else {
+                    Swal.fire('Error', result.message || 'Staff not found!', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading staff for edit:', error);
+                Swal.fire('Error', 'An error occurred while loading staff information!', 'error');
+            }
+        }
+
+        async function deleteStaff(id, name) {
+            const confirm = await Swal.fire({
+                title: 'Confirm Delete',
+                text: `Are you sure you want to delete "${name}"?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonText: 'Cancel',
+                confirmButtonText: 'Delete'
+            });
+
+            if (confirm.isConfirmed) {
+                try {
+                    // SỬA: Thay đổi từ '/Owner/Staff/Delete/' thành '/StaffManagement/Delete/'
+                    const response = await fetch(`/StaffManagement/Delete/${id}`, { method: 'POST' });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        Swal.fire('Deleted!', 'Staff has been deleted.', 'success')
+                            .then(() => location.reload());
+                    } else {
+                        Swal.fire('Error', result.message || 'Cannot delete staff!', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error deleting staff:', error);
+                    Swal.fire('Error', 'An error occurred while deleting staff!', 'error');
+                }
+            }
+        }
+    </script>
+}

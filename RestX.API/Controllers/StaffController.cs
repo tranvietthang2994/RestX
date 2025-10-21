@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using RestX.API.Hubs;
@@ -9,6 +10,7 @@ namespace RestX.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Owner,Staff")] // Staff functions and management
     public class StaffController : ControllerBase
     {
         private readonly IMenuService menuService;

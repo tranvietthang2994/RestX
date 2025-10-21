@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestX.API.Models.ViewModels;
 using RestX.API.Services.Interfaces;
@@ -6,6 +7,7 @@ namespace RestX.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Owner")] // Only Owner can access these endpoints
     public class OwnerController : ControllerBase
     {
         private readonly IDashboardService dashboardService;

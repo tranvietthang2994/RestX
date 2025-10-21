@@ -1,0 +1,52 @@
+﻿@model RestX.WebApp.Models.ViewModels.StaffProfileViewModel
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    ViewData["Title"] = "Profile";
+    Layout = "_StaffLayout";
+}
+
+<div class="page-header">
+    <h1>Personal Information</h1>
+</div>
+
+<div class="profile-container">
+    <div class="profile-header">
+        <img src="https://i.pravatar.cc/150?u=@Model.IsActive" alt="Avatar" class="profile-avatar" />
+        <div class="profile-name">@Model.Name</div>
+        <div class="profile-role">Service Staff</div>
+    </div>
+
+    <ul class="profile-info-list">
+        <li class="profile-info-item">
+            <i class="fa-solid fa-phone"></i>
+            <span>Phone: @Model.Phone</span>
+        </li>
+        <li class="profile-info-item">
+            <i class="fa-solid fa-envelope"></i>
+            <span>Email: @Model.Email</span>
+        </li>
+    </ul>
+
+    <button class="btn-action" id="show-qr-btn">
+        <i class="fa-solid fa-qrcode"></i>
+        Payment QR Code
+    </button>
+    <form asp-controller="Login" asp-action="Logout" method="post" style="display: contents;">
+        <button type="submit" class="btn-logout">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            Logout
+        </button>
+    </form>
+</div>
+
+<!-- QR Code Modal -->
+<div id="qrModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+       
+        <h2>Scan to Pay</h2>
+        <img src="https://vinasupport.com/uploads/2022/05/vinasupport.png" alt="Payment QR Code" style="width: 100%; max-width: 250px; margin: 0 auto; display: block;" />
+    </div>
+</div>
+

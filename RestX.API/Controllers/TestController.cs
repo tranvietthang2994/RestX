@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace RestX.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [AllowAnonymous] // Test endpoints should be accessible without authentication
     public class TestController : ControllerBase
     {
         /// <summary>
