@@ -1,10 +1,17 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <Compile Remove="root\**" />
+	  <Content Remove="root\**" />
+	  <EmbeddedResource Remove="root\**" />
+	  <None Remove="root\**" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<!-- HTTP Client for API calls -->
@@ -20,8 +27,5 @@
 	<ItemGroup>
 		<Folder Include="Extensions\" />
 		<Folder Include="Models\ApiModels\" />
-		<Folder Include="Models\ViewModels\" />
-		<Folder Include="Services\Interfaces\" />
-		<Folder Include="Services\Implementations\" />
 	</ItemGroup>
 </Project>
