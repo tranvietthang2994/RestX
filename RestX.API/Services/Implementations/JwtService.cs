@@ -70,7 +70,7 @@ namespace RestX.API.Services.Implementations
                     ValidateIssuer = false,
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey)),
-                    ValidateLifetime = false // We don't care about expiry here
+                    ValidateLifetime = false 
                 };
 
                 var tokenHandler = new JwtSecurityTokenHandler();

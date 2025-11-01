@@ -67,27 +67,30 @@ namespace RestX.UI.Models.ViewModels
 
     public class CustomerRequestViewModel
     {
+        public List<OrderRequestViewModel> Orders { get; set; } = new();
+    }
+
+    public class OrderRequestViewModel
+    {
         public Guid Id { get; set; }
         public string CustomerName { get; set; } = string.Empty;
-        public string Phone { get; set; } = string.Empty;
-        public string TableName { get; set; } = string.Empty;
-        public int TableId { get; set; }
-        public string RequestType { get; set; } = string.Empty;
-        public string? Message { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public DateTime RequestDate { get; set; }
-        public DateTime? ResponseDate { get; set; }
-        public string? StaffResponse { get; set; }
+        public string CustomerPhone { get; set; } = string.Empty;
+        public int TableNumber { get; set; }
+        public string OrderStatus { get; set; } = string.Empty;
+        public DateTime? OrderTime { get; set; }
+        public bool IsActive { get; set; }
+        public List<OrderDetailRequestViewModel> OrderDetails { get; set; } = new();
+        public decimal TotalAmount { get; set; }
+    }
 
-        public string StatusBadgeClass => Status?.ToLower() switch
-        {
-            "pending" => "badge-warning",
-            "in-progress" => "badge-info",
-            "resolved" => "badge-success",
-            "cancelled" => "badge-danger",
-            _ => "badge-secondary"
-        };
-
-        public bool CanRespond => Status?.ToLower() == "pending";
+    public class OrderDetailRequestViewModel
+    {
+        public Guid Id { get; set; }
+        public int DishId { get; set; }
+        public string DishName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public decimal Price { get; set; }
+        public bool IsActive { get; set; }
+        public decimal SubTotal => Quantity * Price;
     }
 }

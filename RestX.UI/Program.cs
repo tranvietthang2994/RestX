@@ -21,7 +21,7 @@ builder.Services.AddSession(options =>
 // HTTP Client services for API calls
 builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 {
-    client.BaseAddress = new Uri("https://localhost:5000/"); // RestX.API URL
+    client.BaseAddress = new Uri("https://localhost:7294/api/"); // RestX.API URL
     client.DefaultRequestHeaders.Add("Accept", "application/json");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
@@ -30,15 +30,17 @@ builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 builder.Services.AddAutoMapper(typeof(Program));
 
 // Register services
-builder.Services.AddScoped<IApiService, ApiService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IMenuUIService, MenuUIService>();
-builder.Services.AddScoped<ICartUIService, CartUIService>();
-builder.Services.AddScoped<IOwnerUIService, OwnerUIService>();
-builder.Services.AddScoped<IStaffUIService, StaffUIService>();
-builder.Services.AddScoped<IOrderUIService, OrderUIService>();
-builder.Services.AddScoped<ICustomerUIService, CustomerUIService>();
-builder.Services.AddScoped<IDishManagementUIService, DishManagementUIService>();
+//builder.Services.AddScoped<IApiService, ApiService>();
+builder.Services.AddScoped<IStaffService, StaffService>();
+
+//builder.Services.AddScoped<IAuthService, AuthService>();
+//builder.Services.AddScoped<IMenuUIService, MenuUIService>();
+//builder.Services.AddScoped<ICartUIService, CartUIService>();
+//builder.Services.AddScoped<IOwnerUIService, OwnerUIService>();
+//builder.Services.AddScoped<IStaffUIService, StaffUIService>();
+//builder.Services.AddScoped<IOrderUIService, OrderUIService>();
+//builder.Services.AddScoped<ICustomerUIService, CustomerUIService>();
+//builder.Services.AddScoped<IDishManagementUIService, DishManagementUIService>();
 
 var app = builder.Build();
 
@@ -54,8 +56,8 @@ app.UseStaticFiles();
 
 app.UseRouting();
 app.UseSession();
-app.UseAuthentication();
-app.UseAuthorization();
+//app.UseAuthentication();
+//app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
