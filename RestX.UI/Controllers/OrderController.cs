@@ -5,7 +5,6 @@ using RestX.UI.Services.Interfaces;
 
 namespace RestX.UI.Controllers
 {
-    [Authorize(Roles = "Owner,Staff")]
     public class OrderController : Controller
     {
         private readonly IOrderUIService _orderService;
@@ -27,6 +26,7 @@ namespace RestX.UI.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet]
+        [Authorize(Roles = "Owner,Staff")]
         public async Task<IActionResult> Index()
         {
             try
@@ -58,30 +58,23 @@ namespace RestX.UI.Controllers
         /// Order history page
         /// </summary>
         /// <returns></returns>
-        [HttpGet]
-        public async Task<IActionResult> History()
+        [HttpGet("Order/History/{ownerId:guid}/{tableId:int}")]
+        public async Task<IActionResult> History(Guid ownerId, int tableId)
         {
-            try
+            var customerIdString = HttpContext.Session.GetString("CustomerId");
+            if (string.IsNullOrEmpty(customerIdString))
             {
-                var orders = await _orderService.GetOrdersAsync();
-                
-                var historyModel = new OrderHistoryViewModel
+                TempData["Message"] = "Bạn hãy vui lòng đăng nhập!";
+                return RedirectToAction("Login", "AuthCustomer", new
                 {
-                    Orders = orders.OrderByDescending(o => o.OrderDate).ToList(),
-                    TotalOrders = orders.Count,
-                    TotalRevenue = orders.Sum(o => o.TotalAmount)
-                };
-
-                return View(historyModel);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading order history page");
-                return View("Error", new ErrorViewModel 
-                { 
-                    Message = "An error occurred while loading order history"
+                    OwnerId = ownerId,
+                    TableId = tableId
                 });
             }
+            var customerId = Guid.Parse(customerIdString);
+
+            var model = await _orderService.GetOrdersByCustomerIdOwnerIdAsync(ownerId, customerId);
+            return View(model);
         }
 
         /// <summary>
@@ -89,6 +82,7 @@ namespace RestX.UI.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet]
+        [Authorize(Roles = "Owner,Staff")]
         public async Task<IActionResult> GetOrders()
         {
             try
@@ -109,6 +103,7 @@ namespace RestX.UI.Controllers
         /// <param name="orderId">Order ID</param>
         /// <returns></returns>
         [HttpGet]
+        [Authorize(Roles = "Owner,Staff")]
         public async Task<IActionResult> GetOrder(Guid orderId)
         {
             try
@@ -135,6 +130,7 @@ namespace RestX.UI.Controllers
         /// <param name="orderId">Order ID</param>
         /// <returns></returns>
         [HttpGet]
+        [Authorize(Roles = "Owner,Staff")]
         public async Task<IActionResult> GetOrderDetails(Guid orderId)
         {
             try
@@ -155,6 +151,7 @@ namespace RestX.UI.Controllers
         /// <param name="orderId">Order ID</param>
         /// <returns></returns>
         [HttpGet]
+        [Authorize(Roles = "Owner,Staff")]
         public async Task<IActionResult> Details(Guid orderId)
         {
             try
@@ -195,6 +192,7 @@ namespace RestX.UI.Controllers
         /// <param name="status">New status</param>
         /// <returns></returns>
         [HttpPost]
+        [Authorize(Roles = "Owner,Staff")]
         public async Task<IActionResult> UpdateOrderStatus(Guid orderId, string status)
         {
             try
@@ -227,6 +225,7 @@ namespace RestX.UI.Controllers
         /// <param name="status">New status</param>
         /// <returns></returns>
         [HttpPost]
+        [Authorize(Roles = "Owner,Staff")]
         public async Task<IActionResult> UpdateOrderDetailStatus(Guid orderDetailId, string status)
         {
             try
@@ -259,6 +258,7 @@ namespace RestX.UI.Controllers
         /// <param name="reason">Cancellation reason</param>
         /// <returns></returns>
         [HttpPost]
+        [Authorize(Roles = "Owner,Staff")]
         public async Task<IActionResult> CancelOrder(Guid orderId, string? reason)
         {
             try
@@ -280,6 +280,7 @@ namespace RestX.UI.Controllers
         /// <param name="status">Order status</param>
         /// <returns></returns>
         [HttpGet]
+        [Authorize(Roles = "Owner,Staff")]
         public async Task<IActionResult> GetOrdersByStatus(string status)
         {
             try
@@ -301,6 +302,7 @@ namespace RestX.UI.Controllers
         /// <param name="toDate">End date</param>
         /// <returns></returns>
         [HttpGet]
+        [Authorize(Roles = "Owner,Staff")]
         public async Task<IActionResult> GetOrdersByDateRange(DateTime fromDate, DateTime toDate)
         {
             try
@@ -328,6 +330,7 @@ namespace RestX.UI.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet]
+        [Authorize(Roles = "Owner,Staff")]
         public async Task<IActionResult> Kitchen()
         {
             try

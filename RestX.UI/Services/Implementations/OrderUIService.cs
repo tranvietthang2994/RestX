@@ -1,3 +1,4 @@
+using System.Linq;
 using RestX.UI.Models.ApiModels;
 using RestX.UI.Models.ViewModels;
 using RestX.UI.Services.Interfaces;
@@ -288,7 +289,46 @@ namespace RestX.UI.Services.Implementations
             }
         }
 
+        public async Task<List<CartViewModel>> GetOrdersByCustomerIdOwnerIdAsync(Guid ownerId, Guid customerId)
+        {
+            try
+            {
+                var response = await _apiService.GetAsync<ApiResponse<List<CartApiModel>>>($"api/order/history/{ownerId}/customer/{customerId}");
+
+                if (response?.Success == true && response.Data != null)
+                {
+                    return response.Data.Select(apiModel => MapToCartViewModel(apiModel)).ToList();
+                }
+
+                _logger.LogWarning("Failed to get orders for owner: {OwnerId}, customer: {CustomerId}", ownerId, customerId);
+                return new List<CartViewModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting orders for owner: {OwnerId}, customer: {CustomerId}", ownerId, customerId);
+                return new List<CartViewModel>();
+            }
+        }
+
         #region Private Mapping Methods
+
+        private CartViewModel MapToCartViewModel(CartApiModel apiModel)
+        {
+            return new CartViewModel
+            {
+                OwnerId = apiModel.OwnerId,
+                TableId = apiModel.TableId,
+                OrderId = apiModel.OrderId,
+                Time = apiModel.Time,
+                DishList = apiModel.DishList.Select(dishListapi => new DishCartViewModel
+                {
+                    DishId = dishListapi.DishId,
+                    DishName = dishListapi.DishName,
+                    Quantity = dishListapi.Quantity,
+                    Price = dishListapi.Price
+                }).ToList(),
+            };
+        }
 
         private OrderViewModel MapToOrderViewModel(OrderApiModel apiModel)
         {

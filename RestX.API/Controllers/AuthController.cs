@@ -171,6 +171,8 @@ namespace RestX.API.Controllers
                     });
                 }
 
+                HttpContext.Session.SetString("CustomerId", customer.Id.ToString());
+
                 // Create customer claims
                 var claims = _jwtService.CreateCustomerClaims(customer.Id, customer.Name, customer.Phone);
 

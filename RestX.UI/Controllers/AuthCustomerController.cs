@@ -69,6 +69,7 @@ namespace RestX.UI.Controllers
                     HttpContext.Session.SetString("CustomerPhone", model.Phone);
 
                     _logger.LogInformation("Customer login successful: {CustomerName}", model.Name);
+                    _logger.LogInformation("Session CustomerId: {CustomerId}", HttpContext.Session.GetString("CustomerId"));
 
                     // Redirect back to home/menu
                     TempData["Message"] = $"Welcome, {response.User.Name}!";

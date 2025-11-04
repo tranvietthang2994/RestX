@@ -8,7 +8,6 @@ namespace RestX.UI.Services.Implementations
     {
         private readonly IApiService _apiService;
         private readonly ILogger<MenuUIService> _logger;
-
         public MenuUIService(IApiService apiService, ILogger<MenuUIService> logger)
         {
             _apiService = apiService;

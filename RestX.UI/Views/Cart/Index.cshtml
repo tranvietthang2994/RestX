@@ -156,7 +156,7 @@
         <span>0 đ</span>
     </div>
 
-    <form asp-action="IndexPost" asp-controller="Cart" asp-route-ownerId="@Model.OwnerId" asp-route-tableId="@Model.TableId" method="post">
+    <form asp-action="Checkout" asp-controller="Cart" asp-route-ownerId="@Model.OwnerId" asp-route-tableId="@Model.TableId" method="post">
         <input type="hidden" name="OwnerId" value="@Model.OwnerId" />
         <input type="hidden" name="TableId" value="@Model.TableId" />
         <input type="hidden" name="DishListJson" value="@Model.DishListJson" />

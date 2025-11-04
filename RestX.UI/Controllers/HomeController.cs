@@ -7,12 +7,12 @@ namespace RestX.UI.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly IMenuUIService _menuService;
+        private readonly IHomeUIService _homeService;
         private readonly ILogger<HomeController> _logger;
 
-        public HomeController(IMenuUIService menuService, ILogger<HomeController> logger)
+        public HomeController(IHomeUIService homeService, ILogger<HomeController> logger)
         {
-            _menuService = menuService;
+            _homeService = homeService;
             _logger = logger;
         }
 
@@ -40,15 +40,15 @@ namespace RestX.UI.Controllers
                 HttpContext.Session.SetString("OwnerId", ownerId.ToString());
                 HttpContext.Session.SetString("TableId", tableId.ToString());
 
-                // Get menu for the home page
-                var menu = await _menuService.GetMenuAsync(ownerId, tableId);
+                // Get home for the home page
+                var homeView = await _homeService.GetHomeViewsAsync(ownerId, tableId);
                 
-                if (menu == null || !string.IsNullOrEmpty(menu.ErrorMessage))
+                if (homeView == null || !string.IsNullOrEmpty(homeView.ErrorMessage))
                 {
                     _logger.LogWarning("Failed to load menu for owner: {OwnerId}, table: {TableId}", ownerId, tableId);
                     return View("Error", new ErrorViewModel 
                     { 
-                        Message = menu?.ErrorMessage ?? "Unable to load restaurant menu",
+                        Message = homeView?.ErrorMessage ?? "Unable to load restaurant menu",
                         StatusCode = 404
                     });
                 }
@@ -67,7 +67,7 @@ namespace RestX.UI.Controllers
                     ViewBag.CustomerPhone = HttpContext.Session.GetString("CustomerPhone");
                 }
 
-                return View(menu);
+                return View(homeView);
             }
             catch (Exception ex)
             {

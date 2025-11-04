@@ -1,5 +1,6 @@
 using RestX.UI.Services.Interfaces;
 using RestX.UI.Services.Implementations;
+using RestX.UI.Services.Handlers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,20 +19,24 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
+// Register AuthTokenHandler
+builder.Services.AddTransient<AuthTokenHandler>();
+
 // HTTP Client services for API calls
 builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 {
-    client.BaseAddress = new Uri("https://localhost:5000/"); // RestX.API URL
+    client.BaseAddress = new Uri("https://localhost:7294/"); // RestX.API URL
     client.DefaultRequestHeaders.Add("Accept", "application/json");
     client.Timeout = TimeSpan.FromSeconds(30);
-});
+})
+.AddHttpMessageHandler<AuthTokenHandler>();
 
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
 
 // Register services
-builder.Services.AddScoped<IApiService, ApiService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IHomeUIService, HomeUIService>();
 builder.Services.AddScoped<IMenuUIService, MenuUIService>();
 builder.Services.AddScoped<ICartUIService, CartUIService>();
 builder.Services.AddScoped<IOwnerUIService, OwnerUIService>();

@@ -1,4 +1,5 @@
 using RestX.UI.Services.Interfaces;
+using System.Security.Policy;
 using System.Text;
 using System.Text.Json;
 
@@ -26,6 +27,7 @@ namespace RestX.UI.Services.Implementations
             try
             {
                 _logger.LogInformation("GET request to: {Endpoint}", endpoint);
+                _logger.LogInformation("GET request to: {_httpClient}", _httpClient);
                 var response = await _httpClient.GetAsync(endpoint);
                 
                 if (response.IsSuccessStatusCode)
@@ -57,7 +59,10 @@ namespace RestX.UI.Services.Implementations
                 _logger.LogInformation("POST request to: {Endpoint}", endpoint);
                 var json = JsonSerializer.Serialize(data, _jsonOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
-                
+
+                _logger.LogDebug("Sending {Method} {Url} Authorization: {Auth}", "POST", endpoint,
+                    _httpClient.DefaultRequestHeaders.Authorization?.ToString() ?? "(none)");
+
                 var response = await _httpClient.PostAsync(endpoint, content);
                 
                 if (response.IsSuccessStatusCode)

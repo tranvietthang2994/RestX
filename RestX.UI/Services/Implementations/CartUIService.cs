@@ -1,6 +1,7 @@
 using RestX.UI.Models.ApiModels;
 using RestX.UI.Models.ViewModels;
 using RestX.UI.Services.Interfaces;
+using System.Text.Json;
 
 namespace RestX.UI.Services.Implementations
 {
@@ -201,22 +202,17 @@ namespace RestX.UI.Services.Implementations
             }
         }
 
-        public async Task<bool> CheckoutAsync(Guid ownerId, int tableId, string customerName, string customerPhone)
+        public async Task<bool> CheckoutAsync(Guid ownerId, int tableId, CartViewModel model)
         {
             try
             {
-                _logger.LogInformation("Checkout cart - Owner: {OwnerId}, Table: {TableId}, Customer: {CustomerName}", 
-                    ownerId, tableId, customerName);
+                _logger.LogInformation("Checkout cart - Owner: {OwnerId}, Table: {TableId}, Customer",
+                    ownerId, tableId);
+                    
+            
                 
-                var request = new
-                {
-                    OwnerId = ownerId,
-                    TableId = tableId,
-                    CustomerName = customerName,
-                    CustomerPhone = customerPhone
-                };
 
-                var response = await _apiService.PostAsync<object, ApiResponse>("api/cart/checkout", request);
+                var response = await _apiService.PostAsync<object, ApiResponse>("api/cart/checkout", model);
                 
                 if (response?.Success == true)
                 {
@@ -232,6 +228,18 @@ namespace RestX.UI.Services.Implementations
                 _logger.LogError(ex, "Error during checkout - Owner: {OwnerId}, Table: {TableId}", ownerId, tableId);
                 return false;
             }
+        }
+
+        public async Task<CartViewModel> JsonToDishList(CartViewModel cart)
+        {
+            cart.DishList = JsonSerializer.Deserialize<List<DishCartViewModel>>(cart.DishListJson);
+            return cart;
+        }
+
+        public async Task<CartViewModel> JsonToCartViewModel(string cartJson)
+        {
+            CartViewModel cart = JsonSerializer.Deserialize<CartViewModel>(cartJson);
+            return cart;
         }
 
         #region Private Mapping Methods

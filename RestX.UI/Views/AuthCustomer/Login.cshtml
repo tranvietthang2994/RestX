@@ -1,4 +1,4 @@
-﻿@model RestX.UI.Models.ViewModels.LoginViewModel
+﻿@model RestX.UI.Models.ViewModels.CustomerLoginViewModel
 @{
     ViewData["Title"] = "Đăng nhập";
     Layout = null;
@@ -239,7 +239,7 @@
         <form asp-controller="AuthCustomer" asp-action="Login" asp-route-ownerId="@Model.OwnerId" asp-route-tableId="@(tableId ?? 1)" method="post">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="OwnerId" />
-            <input type="hidden" asp-for="ReturnUrl" />
+            @* <input type="hidden" asp-for="ReturnUrl" /> *@
 
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
@@ -313,7 +313,7 @@
                 phoneStatus.className = 'phone-status loading';
 
                 // Make AJAX request to check phone
-                fetch(`/AuthCustomer/CheckPhone/${ownerId}?phone=${encodeURIComponent(phone)}`, {
+                fetch(`https://localhost:7294/api/AuthCustomer/check-phone/${ownerId}?phone=${encodeURIComponent(phone)}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
