@@ -15,7 +15,7 @@ namespace RestX.API.Services.Implementations
 
         public async Task<CartViewModel> JsonToDishList(CartViewModel cart)
         {
-            cart.DishList = JsonSerializer.Deserialize<DishCartViewModel[]>(cart.DishListJson);
+            cart.DishList = JsonSerializer.Deserialize<List<DishCartViewModel>>(cart.DishListJson);
             return cart;
         }
 

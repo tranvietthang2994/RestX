@@ -69,6 +69,14 @@ namespace RestX.UI.Services.Interfaces
         Task<List<OrderViewModel>> GetPendingOrdersAsync();
 
         /// <summary>
+        /// Get orders by customer ID and owner ID
+        /// </summary>
+        /// <param name="ownerId">Owner ID</param>
+        /// <param name="customerId">Customer ID</param>
+        /// <returns>List of cart view models</returns>
+        Task<List<CartViewModel>> GetOrdersByCustomerIdOwnerIdAsync(Guid ownerId, Guid customerId);
+
+        /// <summary>
         /// Cancel order
         /// </summary>
         /// <param name="orderId">Order ID</param>

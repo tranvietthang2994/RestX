@@ -249,7 +249,11 @@ using RestX.API.Extensions;
 var builder = WebApplication.CreateBuilder(args);
 
 // API Controllers Configuration với JSON cycle handling
-builder.Services.AddControllers()
+builder.Services.AddControllers(options =>
+    {
+        // Ensure RestaurantContext (OwnerId/TableId) is populated from route data for services
+        options.Filters.Add<RestaurantContextFilterAttribute>();
+    })
     .AddJsonOptions(options =>
     {
         // Fix JSON serialization cycles

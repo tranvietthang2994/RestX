@@ -1,5 +1,8 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using RestX.API.Models.DTOs.Response;
 using RestX.API.Models.ViewModels;
+using RestX.API.Services.Implementations;
 using RestX.API.Services.Interfaces;
 
 namespace RestX.API.Controllers
@@ -10,13 +13,16 @@ namespace RestX.API.Controllers
     {
         private readonly IAuthCustomerService authCustomerService;
         private readonly IExceptionHandler exceptionHandler;
+        private readonly IJwtService _jwtService;
 
         public AuthCustomerController(
-            IAuthCustomerService authCustomerService, 
-            IExceptionHandler exceptionHandler)
+            IAuthCustomerService authCustomerService,
+            IExceptionHandler exceptionHandler,
+            IJwtService jwtService)
         {
             this.authCustomerService = authCustomerService;
             this.exceptionHandler = exceptionHandler;
+            _jwtService = jwtService;
         }
 
         /// <summary>
@@ -38,11 +44,30 @@ namespace RestX.API.Controllers
                 if (authCustomer == null)
                     return Unauthorized(new { success = false, message = "Login failed" });
 
+                IEnumerable<System.Security.Claims.Claim> claims;
+                UserInfo userInfo;
+
+                HttpContext.Session.SetString("CustomerId", authCustomer.Id.ToString());
+
+
+                claims = _jwtService.CreateCustomerClaims(
+                    authCustomer.Id,
+                    authCustomer.Name,
+                    authCustomer.Phone
+                    
+                );
+
+                var accessToken = _jwtService.GenerateAccessToken(claims);
+                var refreshToken = _jwtService.GenerateRefreshToken();
+
                 // TODO: Generate JWT token instead of session
                 var response = new
                 {
                     success = true,
                     message = "Login successful",
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken,
+                    ExpiresAt = DateTime.UtcNow.AddMinutes(60),
                     customer = new
                     {
                         id = authCustomer.Id,

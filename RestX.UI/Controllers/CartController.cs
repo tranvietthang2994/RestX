@@ -1,6 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using RestX.UI.Models.ViewModels;
 using RestX.UI.Services.Interfaces;
+using System.Numerics;
+using System.Text.Json;
 
 namespace RestX.UI.Controllers
 {
@@ -21,41 +23,103 @@ namespace RestX.UI.Controllers
         /// <param name="ownerId">Restaurant owner ID</param>
         /// <param name="tableId">Table ID</param>
         /// <returns></returns>
+        //[HttpGet]
+        //[Route("Cart/Index/{ownerId:guid}/{tableId:int}")]
+        //public async Task<IActionResult> Index(Guid ownerId, int tableId)
+        //{
+        //    try
+        //    {
+        //        _logger.LogInformation("Loading cart for owner: {OwnerId}, table: {TableId}", ownerId, tableId);
+
+        //        var cart = await _cartService.GetCartAsync(ownerId, tableId);
+
+        //        if (cart == null)
+        //        {
+        //            cart = new CartViewModel 
+        //            { 
+        //                OwnerId = ownerId, 
+        //                TableId = tableId,
+        //                ErrorMessage = "Unable to load cart"
+        //            };
+        //        }
+
+        //        // Store context
+        //        HttpContext.Session.SetString("OwnerId", ownerId.ToString());
+        //        HttpContext.Session.SetString("TableId", tableId.ToString());
+
+        //        return View(cart);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error loading cart for owner: {OwnerId}, table: {TableId}", ownerId, tableId);
+        //        return View("Error", new ErrorViewModel 
+        //        { 
+        //            Message = "An error occurred while loading the cart"
+        //        });
+        //    }
+        //}
+
         [HttpGet]
         [Route("Cart/Index/{ownerId:guid}/{tableId:int}")]
-        public async Task<IActionResult> Index(Guid ownerId, int tableId)
+        public async Task<IActionResult> Index(CartViewModel model)
         {
-            try
+            var tempModel = TempData["tempModel"];
+            if (tempModel != null)
             {
-                _logger.LogInformation("Loading cart for owner: {OwnerId}, table: {TableId}", ownerId, tableId);
-                
-                var cart = await _cartService.GetCartAsync(ownerId, tableId);
-                
-                if (cart == null)
-                {
-                    cart = new CartViewModel 
-                    { 
-                        OwnerId = ownerId, 
-                        TableId = tableId,
-                        ErrorMessage = "Unable to load cart"
-                    };
-                }
-
-                // Store context
-                HttpContext.Session.SetString("OwnerId", ownerId.ToString());
-                HttpContext.Session.SetString("TableId", tableId.ToString());
-
-                return View(cart);
+                model = await _cartService.JsonToCartViewModel(tempModel.ToString());
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading cart for owner: {OwnerId}, table: {TableId}", ownerId, tableId);
-                return View("Error", new ErrorViewModel 
-                { 
-                    Message = "An error occurred while loading the cart"
-                });
-            }
+
+            model = await _cartService.JsonToDishList(model);
+
+            if (model.Message != null)
+                ViewBag.Message = model.Message;
+
+            return View(model);
         }
+
+        //[HttpPost]
+        //[Route("Cart/IndexPost/{ownerId:guid}/{tableId:int}")]
+        //public async Task<IActionResult> IndexPost(CartViewModel model)
+        //{
+        //    if (!ModelState.IsValid)
+        //    {
+        //        model.Message = "Ối! Có gì đó không ổn";
+        //        TempData["tempModel"] = JsonSerializer.Serialize(model);
+        //        return RedirectToAction("Index", new
+        //        {
+        //            OwnerId = model.OwnerId,
+        //            TableId = model.TableId
+        //        });
+        //    }
+
+        //    UniversalValue<Guid> returnUVOrderId = await orderService.CreatedOrder(model);
+        //    if (!returnUVOrderId.ErrorMessage.IsNullOrEmpty())
+        //    {
+        //        TempData["Message"] = returnUVOrderId.ErrorMessage;
+        //        return RedirectToAction("Login", "AuthCustomer", new
+        //        {
+        //            OwnerId = model.OwnerId,
+        //            TableId = model.TableId
+        //        });
+        //    }
+
+        //    TempData["tempModel"] = JsonSerializer.Serialize(model);
+
+        //    // Broadcast new order to staff in real-time
+        //    if (returnUVOrderId.Data != Guid.Empty)
+        //    {
+        //        // Lấy toàn bộ danh sách order mới nhất
+        //        var customerRequest = await orderService.GetCustomerRequestsByStaffAsync();
+        //        await hubContext.Clients.All.SendAsync("ReceiveOrderList", customerRequest.Orders);
+        //    }
+
+        //    TempData["Message"] = returnUVOrderId.SuccessMessage;
+        //    return RedirectToAction("Index", "Home", new
+        //    {
+        //        OwnerId = model.OwnerId,
+        //        TableId = model.TableId
+        //    });
+        //}
 
         /// <summary>
         /// Add item to cart
@@ -210,14 +274,26 @@ namespace RestX.UI.Controllers
         /// <param name="customerPhone">Customer phone</param>
         /// <returns></returns>
         [HttpPost]
-        public async Task<IActionResult> Checkout(string customerName, string customerPhone)
+        public async Task<IActionResult> Checkout(CartViewModel model)
         {
+
+            var customerIdString = HttpContext.Session.GetString("CustomerId");
+            if (string.IsNullOrEmpty(customerIdString))
+            {
+                TempData["Message"] = "Bạn hãy vui lòng đăng nhập!";
+                return RedirectToAction("Login", "AuthCustomer", new
+                {
+                    OwnerId = model.OwnerId,
+                    TableId = model.TableId,
+                });
+            }
+
             try
             {
-                if (string.IsNullOrWhiteSpace(customerName) || string.IsNullOrWhiteSpace(customerPhone))
-                {
-                    return Json(new { success = false, message = "Customer name and phone are required" });
-                }
+                //if (string.IsNullOrWhiteSpace(customerName) || string.IsNullOrWhiteSpace(customerPhone))
+                //{
+                //    return Json(new { success = false, message = "Customer name and phone are required" });
+                //}
 
                 var ownerIdString = HttpContext.Session.GetString("OwnerId");
                 var tableIdString = HttpContext.Session.GetString("TableId");
@@ -228,22 +304,31 @@ namespace RestX.UI.Controllers
                     return Json(new { success = false, message = "Invalid session data" });
                 }
 
-                var success = await _cartService.CheckoutAsync(ownerId, tableId, customerName, customerPhone);
-                
+                var success = await _cartService.CheckoutAsync(ownerId, tableId, model);
+
+                TempData["tempModel"] = JsonSerializer.Serialize(model);
+
+
                 if (success)
                 {
-                    // Store customer info in session
-                    HttpContext.Session.SetString("CustomerName", customerName);
-                    HttpContext.Session.SetString("CustomerPhone", customerPhone);
-                    
-                    return Json(new { success = true, message = "Order placed successfully!" });
+                    TempData["Message"] = "Order placed successfully!";
+                    return RedirectToAction("Index", "Home", new
+                    {
+                        OwnerId = model.OwnerId,
+                        TableId = model.TableId
+                    });
                 }
-                
-                return Json(new { success = false, message = "Failed to place order" });
+
+                TempData["Message"] = "Failed to place order";
+                return RedirectToAction("Index", "Home", new
+                {
+                    OwnerId = model.OwnerId,
+                    TableId = model.TableId
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during checkout for customer: {CustomerName}", customerName);
+                _logger.LogError(ex, "Error during checkout for customer");
                 return Json(new { success = false, message = "An error occurred while placing the order" });
             }
         }

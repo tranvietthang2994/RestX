@@ -57,6 +57,9 @@ namespace RestX.UI.Services.Interfaces
         /// <param name="customerName">Customer name</param>
         /// <param name="customerPhone">Customer phone</param>
         /// <returns>Order result</returns>
-        Task<bool> CheckoutAsync(Guid ownerId, int tableId, string customerName, string customerPhone);
+        Task<bool> CheckoutAsync(Guid ownerId, int tableId, CartViewModel model);
+
+        Task<CartViewModel> JsonToDishList(CartViewModel cart);
+        Task<CartViewModel> JsonToCartViewModel(string cartJson);
     }
 }

@@ -54,9 +54,9 @@ namespace RestX.API.Services.Implementations
             return await CreatedOrderDetails(model.DishList, model.OrderId.Value);
         }
 
-        public async Task<UniversalValue<Guid[]>> CreatedOrderDetails(DishCartViewModel[] modelList, Guid OrderId)
+        public async Task<UniversalValue<Guid[]>> CreatedOrderDetails(List<DishCartViewModel> modelList, Guid OrderId)
         {
-            Guid[] orderDetailIdList = new Guid[modelList.Length];
+            Guid[] orderDetailIdList = new Guid[modelList.Count()];
             int i = 0;
 
             try
@@ -163,20 +163,18 @@ namespace RestX.API.Services.Implementations
                 foreach(var order in orders)
                 {
                     List<OrderDetail> orderDetails = order.OrderDetails.ToList();
-                    DishCartViewModel[] dishCart = new DishCartViewModel[orderDetails.Count()];
-                    int i = 0;
+                    List<DishCartViewModel> dishCart = new List<DishCartViewModel>();
 
                     foreach (var orderDetail in orderDetails)
                     {
-                        dishCart[i] = new DishCartViewModel()
+                        dishCart.Add(new DishCartViewModel()
                         {
                             DishId = orderDetail.DishId,
                             DishName = orderDetail.Dish.Name,
                             Quantity = orderDetail.Quantity,
                             Price = orderDetail.Price,
                             ImgUrl = orderDetail.Dish.File.Url,
-                        };
-                        i++;
+                        });
                     }
 
                     cartViewModels.Add(new CartViewModel

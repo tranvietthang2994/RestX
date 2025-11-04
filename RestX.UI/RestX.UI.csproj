@@ -7,10 +7,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <Compile Remove="root\**" />
-	  <Content Remove="root\**" />
-	  <EmbeddedResource Remove="root\**" />
-	  <None Remove="root\**" />
+	  <Content Remove="wwwroot\UpLoads\restaurant_logo.jpg" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -26,6 +23,10 @@
 	
 	<ItemGroup>
 		<Folder Include="Extensions\" />
-		<Folder Include="Models\ApiModels\" />
+		<Folder Include="wwwroot\UpLoads\Dishes\" />
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <None Include="wwwroot\UpLoads\restaurant_logo.jpg" />
 	</ItemGroup>
 </Project>

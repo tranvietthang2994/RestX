@@ -222,126 +222,128 @@ window.StaffPageManager = (function () {
   }
 
   // Menu page handlers
-    function initMenuPage() {
-        console.log("Initializing Menu page");
+  function initMenuPage() {
+    console.log("Initializing Menu page");
 
-        // =====================
-        // 🔍 Search functionality
-        // =====================
-        const searchHandler = function (e) {
-            const searchTerm = e.target.value.toLowerCase();
-            const dishCards = document.querySelectorAll(".menu-dish-card-staff");
-            const sections = document.querySelectorAll(".menu-section-staff");
+    // =====================
+    // 🔍 Search functionality
+    // =====================
+    const searchHandler = function (e) {
+      const searchTerm = e.target.value.toLowerCase();
+      const dishCards = document.querySelectorAll(".menu-dish-card-staff");
+      const sections = document.querySelectorAll(".menu-section-staff");
 
-            dishCards.forEach((card) => {
-                const dishName = card.dataset.dishName;
-                const matches = dishName.includes(searchTerm);
-                card.style.display = matches ? "flex" : "none";
-            });
+      dishCards.forEach((card) => {
+        const dishName = card.dataset.dishName;
+        const matches = dishName.includes(searchTerm);
+        card.style.display = matches ? "flex" : "none";
+      });
 
-            // Hide sections with no visible dishes
-            sections.forEach((section) => {
-                const visibleDishes = section.querySelectorAll(
-                    '.menu-dish-card-staff[style="display: flex"], .menu-dish-card-staff:not([style*="display: none"])'
-                );
-                const hasVisibleDishes = Array.from(visibleDishes).some(
-                    (dish) => !dish.style.display || dish.style.display === "flex"
-                );
-                section.style.display = hasVisibleDishes ? "block" : "none";
-            });
-        };
+      // Hide sections with no visible dishes
+      sections.forEach((section) => {
+        const visibleDishes = section.querySelectorAll(
+          '.menu-dish-card-staff[style="display: flex"], .menu-dish-card-staff:not([style*="display: none"])'
+        );
+        const hasVisibleDishes = Array.from(visibleDishes).some(
+          (dish) => !dish.style.display || dish.style.display === "flex"
+        );
+        section.style.display = hasVisibleDishes ? "block" : "none";
+      });
+    };
 
-        const searchInput = document.getElementById("searchInput");
-        if (searchInput) {
-            searchInput.addEventListener("input", searchHandler);
-        }
-
-        // =====================
-        // 🍽️ Availability toggle functionality
-        // =====================
-        const toggleHandlers = [];
-        document.querySelectorAll(".availability-toggle").forEach((toggle) => {
-            const toggleHandler = async function () {
-                const dishId = toggle.dataset.dishId;
-                const isCurrentlyActive = !toggle.classList.contains("off");
-
-                try {
-                    console.log("Updating dish availability:", {
-                        dishId,
-                        isActive: !isCurrentlyActive,
-                    });
-
-                    // GỌI API — sửa cho đúng ngữ cảnh backend của bạn
-                    const apiUrl = "https://localhost:7294/api/Staff/dish-availability";
-
-                    const response = await fetch(apiUrl, {
-                        method: "PUT",
-                        headers: {
-                            "Content-Type": "application/json",
-                            Accept: "application/json",
-                        },
-                        body: JSON.stringify({
-                            dishId: parseInt(dishId),
-                            isActive: !isCurrentlyActive,
-                        }),
-                    });
-
-                    console.log("Response status:", response.status);
-
-                    // Xử lý kết quả an toàn hơn
-                    let result;
-                    try {
-                        result = await response.json();
-                    } catch {
-                        throw new Error("Invalid JSON response from server");
-                    }
-
-                    console.log("Response result:", result);
-
-                    if (response.ok && result.success) {
-                        // ✅ Cập nhật UI thành công
-                        toggle.classList.toggle("off");
-                        const icon = toggle.querySelector("i");
-                        const label = toggle.querySelector("span");
-
-                        if (toggle.classList.contains("off")) {
-                            icon.className = "fa-solid fa-toggle-off";
-                            label.textContent = "Out of Stock";
-                        } else {
-                            icon.className = "fa-solid fa-toggle-on";
-                            label.textContent = "Available";
-                        }
-                    } else {
-                        console.error("Failed to update dish availability:", result.message);
-                        alert(
-                            "Failed to update dish availability: " +
-                            (result.message || "Please try again.")
-                        );
-                    }
-                } catch (error) {
-                    console.error("Error updating dish availability:", error);
-                    alert("An error occurred. Please try again.");
-                }
-            };
-
-            toggle.addEventListener("click", toggleHandler);
-            toggleHandlers.push({ element: toggle, handler: toggleHandler });
-        });
-
-        // =====================
-        // 🧹 Cleanup
-        // =====================
-        return function () {
-            console.log("Cleaning up Menu page");
-            if (searchInput) {
-                searchInput.removeEventListener("input", searchHandler);
-            }
-            toggleHandlers.forEach(({ element, handler }) => {
-                element.removeEventListener("click", handler);
-            });
-        };
+    const searchInput = document.getElementById("searchInput");
+    if (searchInput) {
+      searchInput.addEventListener("input", searchHandler);
     }
 
+    // =====================
+    // 🍽️ Availability toggle functionality
+    // =====================
+    const toggleHandlers = [];
+    document.querySelectorAll(".availability-toggle").forEach((toggle) => {
+      const toggleHandler = async function () {
+        const dishId = toggle.dataset.dishId;
+        const isCurrentlyActive = !toggle.classList.contains("off");
+
+        try {
+          console.log("Updating dish availability:", {
+            dishId,
+            isActive: !isCurrentlyActive,
+          });
+
+          // GỌI API — sửa cho đúng ngữ cảnh backend của bạn
+          const apiUrl = "https://localhost:7294/api/Staff/dish-availability";
+
+          const response = await fetch(apiUrl, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              dishId: parseInt(dishId),
+              isActive: !isCurrentlyActive,
+            }),
+          });
+
+          console.log("Response status:", response.status);
+
+          // Xử lý kết quả an toàn hơn
+          let result;
+          try {
+            result = await response.json();
+          } catch {
+            throw new Error("Invalid JSON response from server");
+          }
+
+          console.log("Response result:", result);
+
+          if (response.ok && result.success) {
+            // ✅ Cập nhật UI thành công
+            toggle.classList.toggle("off");
+            const icon = toggle.querySelector("i");
+            const label = toggle.querySelector("span");
+
+            if (toggle.classList.contains("off")) {
+              icon.className = "fa-solid fa-toggle-off";
+              label.textContent = "Out of Stock";
+            } else {
+              icon.className = "fa-solid fa-toggle-on";
+              label.textContent = "Available";
+            }
+          } else {
+            console.error(
+              "Failed to update dish availability:",
+              result.message
+            );
+            alert(
+              "Failed to update dish availability: " +
+                (result.message || "Please try again.")
+            );
+          }
+        } catch (error) {
+          console.error("Error updating dish availability:", error);
+          alert("An error occurred. Please try again.");
+        }
+      };
+
+      toggle.addEventListener("click", toggleHandler);
+      toggleHandlers.push({ element: toggle, handler: toggleHandler });
+    });
+
+    // =====================
+    // 🧹 Cleanup
+    // =====================
+    return function () {
+      console.log("Cleaning up Menu page");
+      if (searchInput) {
+        searchInput.removeEventListener("input", searchHandler);
+      }
+      toggleHandlers.forEach(({ element, handler }) => {
+        element.removeEventListener("click", handler);
+      });
+    };
+  }
 
   function cleanupMenuPage() {
     console.log("Menu cleanup completed");
@@ -620,69 +622,70 @@ window.StaffPageManager = (function () {
         detail.isActive = isActive;
       }
     };
-      window.saveOrderDetailsChanges = async function () {
-          if (!hasChanges) {
-              closeModal();
-              return;
-          }
+    window.saveOrderDetailsChanges = async function () {
+      if (!hasChanges) {
+        closeModal();
+        return;
+      }
 
-          const saveButton = document.getElementById("saveChangesBtn");
-          saveButton.disabled = true;
-          saveButton.textContent = "Saving...";
+      const saveButton = document.getElementById("saveChangesBtn");
+      saveButton.disabled = true;
+      saveButton.textContent = "Saving...";
+
+      try {
+        const apiBaseUrl =
+          "https://localhost:7294/api/Staff/order-detail-status";
+
+        const promises = currentOrderData.orderDetails.map(async (detail) => {
+          const requestData = {
+            orderDetailId: detail.id,
+            isActive: detail.isActive,
+          };
+
+          const response = await fetch(apiBaseUrl, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestData),
+          });
+
+          const text = await response.text();
+          let result = null;
 
           try {
-              const apiBaseUrl = "https://localhost:7294/api/Staff/order-detail-status";
-
-              const promises = currentOrderData.orderDetails.map(async (detail) => {
-                  const requestData = {
-                      orderDetailId: detail.id,
-                      isActive: detail.isActive
-                  };
-
-                  const response = await fetch(apiBaseUrl, {
-                      method: "PUT",
-                      headers: {
-                          "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify(requestData),
-                  });
-
-                  const text = await response.text();
-                  let result = null;
-
-                  try {
-                      result = JSON.parse(text);
-                  } catch {
-                      console.warn("Non-JSON response:", text);
-                  }
-
-                  if (!response.ok || !result?.success) {
-                      throw new Error(`Failed to update ${detail.dishName}`);
-                  }
-
-                  return result;
-              });
-
-              const results = await Promise.allSettled(promises);
-
-              const failed = results.filter(r => r.status === "rejected");
-              if (failed.length === 0) {
-                  alert("✅ All changes saved successfully!");
-                  location.reload(); 
-              } else {
-                  alert(`⚠️ Some updates failed: ${failed.length} item(s). Please try again.`);
-                  console.error(failed);
-              }
-
-          } catch (error) {
-              console.error("Error saving changes:", error);
-              alert("❌ An error occurred while saving changes. Please try again.");
-          } finally {
-              saveButton.disabled = false;
-              saveButton.textContent = "Save Changes";
+            result = JSON.parse(text);
+          } catch {
+            console.warn("Non-JSON response:", text);
           }
-      };
 
+          if (!response.ok || !result?.success) {
+            throw new Error(`Failed to update ${detail.dishName}`);
+          }
+
+          return result;
+        });
+
+        const results = await Promise.allSettled(promises);
+
+        const failed = results.filter((r) => r.status === "rejected");
+        if (failed.length === 0) {
+          alert("✅ All changes saved successfully!");
+          location.reload();
+        } else {
+          alert(
+            `⚠️ Some updates failed: ${failed.length} item(s). Please try again.`
+          );
+          console.error(failed);
+        }
+      } catch (error) {
+        console.error("Error saving changes:", error);
+        alert("❌ An error occurred while saving changes. Please try again.");
+      } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = "Save Changes";
+      }
+    };
 
     window.closeModal = function () {
       document.getElementById("orderDetailsModal").style.display = "none";
