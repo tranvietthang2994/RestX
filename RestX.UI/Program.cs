@@ -35,6 +35,9 @@ builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 builder.Services.AddAutoMapper(typeof(Program));
 
 // Register services
+builder.Services.AddScoped<IApiService, ApiService>();
+builder.Services.AddScoped<IStaffService, StaffService>();
+
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IHomeUIService, HomeUIService>();
 builder.Services.AddScoped<IMenuUIService, MenuUIService>();
@@ -59,8 +62,8 @@ app.UseStaticFiles();
 
 app.UseRouting();
 app.UseSession();
-app.UseAuthentication();
-app.UseAuthorization();
+//app.UseAuthentication();
+//app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
