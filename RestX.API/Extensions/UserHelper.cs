@@ -33,7 +33,7 @@
                 // TODO: Remove this fallback when JWT authentication is properly implemented
                 // For development/testing purposes, return a default StaffId
                 #if DEBUG
-                return Guid.Parse("22222222-2222-2222-2222-222222222222"); // Default test StaffId
+                return Guid.Parse("550e8400-e29b-41d4-a716-446655440042"); // Default test StaffId
                 #else
                 throw new UnauthorizedAccessException("StaffId claim is missing or invalid.");
                 #endif

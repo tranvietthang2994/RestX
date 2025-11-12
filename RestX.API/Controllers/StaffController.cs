@@ -120,13 +120,32 @@ namespace RestX.API.Controllers
         /// </summary>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Staff profile data</returns>
+        //[HttpGet("profile")]
+        //public async Task<IActionResult> GetProfile(CancellationToken cancellationToken = default)
+        //{
+        //    try
+        //    {
+        //        var staffProfile = await staffService.GetStaffProfileAsync(cancellationToken);
+        //        return Ok(new { success = true, data = staffProfile });
+        //    }
+        //    catch (UnauthorizedAccessException)
+        //    {
+        //        return Unauthorized(new { success = false, message = "Staff not authenticated" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        this.exceptionHandler.RaiseException(ex, "An error occurred while processing Profile for Staff.");
+        //        return StatusCode(500, new { success = false, message = "Internal server error" });
+        //    }
+        //}
+
         [HttpGet("profile")]
         public async Task<IActionResult> GetProfile(CancellationToken cancellationToken = default)
         {
             try
             {
-                var staffProfile = await staffService.GetStaffProfileAsync(cancellationToken);
-                return Ok(new { success = true, data = staffProfile });
+                var profileDto = await staffService.GetStaffProfileAsync(cancellationToken);
+                return Ok(new { success = true, data = profileDto });
             }
             catch (UnauthorizedAccessException)
             {
@@ -134,10 +153,10 @@ namespace RestX.API.Controllers
             }
             catch (Exception ex)
             {
-                this.exceptionHandler.RaiseException(ex, "An error occurred while processing Profile for Staff.");
                 return StatusCode(500, new { success = false, message = "Internal server error" });
             }
         }
+
 
         /// <summary>
         /// Cập nhật tình trạng món ăn (available/unavailable)

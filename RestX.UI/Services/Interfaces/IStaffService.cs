@@ -7,5 +7,6 @@ namespace RestX.UI.Services.Interfaces
         Task<IEnumerable<TableStatusViewModel>?> GetAllTablesAsync();
         Task<CustomerRequestViewModel> GetAllCustomerRequestsAsync();
         Task<MenuViewModel> GetMenuAsync();
+        Task<StaffProfileAPIViewModel?> GetStaffProfileAsync();
     }
 }
