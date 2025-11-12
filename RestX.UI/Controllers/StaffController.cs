@@ -16,7 +16,7 @@ namespace RestX.UI.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult>StatusTable()
+        public async Task<IActionResult> StatusTable()
         {
             var tables = await _tableService.GetAllTablesAsync();
             Console.WriteLine($"Fetched tables: {tables?.Count()}");
@@ -26,7 +26,7 @@ namespace RestX.UI.Controllers
         public async Task<IActionResult> CustomerRequests()
         {
             var customerRequests = await _tableService.GetAllCustomerRequestsAsync();
-            return View(customerRequests); 
+            return View(customerRequests);
         }
 
         [HttpGet]

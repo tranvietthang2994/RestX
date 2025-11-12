@@ -25,7 +25,7 @@ builder.Services.AddTransient<AuthTokenHandler>();
 // HTTP Client services for API calls
 builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 {
-    client.BaseAddress = new Uri("https://localhost:7294/"); // RestX.API URL
+    client.BaseAddress = new Uri("https://localhost:7294/api/"); // RestX.API URL
     client.DefaultRequestHeaders.Add("Accept", "application/json");
     client.Timeout = TimeSpan.FromSeconds(30);
 })
@@ -35,7 +35,7 @@ builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 builder.Services.AddAutoMapper(typeof(Program));
 
 // Register services
-builder.Services.AddScoped<IApiService, ApiService>();
+//builder.Services.AddScoped<IApiService, ApiService>();
 builder.Services.AddScoped<IStaffService, StaffService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
