@@ -97,6 +97,13 @@ namespace RestX.UI.Services.Implementations
             }
         }
 
+        public async Task<StaffProfileAPIViewModel?> GetStaffProfileAsync()
+        {
+            var response = await _apiService.GetAsync<ApiResponse<StaffProfileAPIViewModel>>("Staff/profile");
+            return response?.Success == true ? response.Data : null;
+        }
+
+
 
 
         // response wrapper (định nghĩa tạm bên trong class cho dễ dùng)

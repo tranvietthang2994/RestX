@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Models\DTOs\Response\" />
     <Folder Include="Middleware\" />
     <Folder Include="Mappings\" />
   </ItemGroup>

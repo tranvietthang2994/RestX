@@ -35,6 +35,27 @@ namespace RestX.UI.Controllers
             var menu = await _tableService.GetMenuAsync();
             return View(menu);
         }
+        [HttpGet]
+        public async Task<IActionResult> Profile()
+        {
+            try
+            {
+
+                var staffProfile = await _tableService.GetStaffProfileAsync();
+
+                if (staffProfile == null)
+                {
+                    return View(new StaffProfileAPIViewModel());
+                }
+
+                return View(staffProfile);
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "An error occurred while loading your profile.";
+                return RedirectToAction("StatusTable");
+            }
+        }
 
 
     }
