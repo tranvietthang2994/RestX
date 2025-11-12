@@ -119,8 +119,8 @@ namespace RestX.UI.Models.ViewModels
 
         public bool? IsActive { get; set; }
 
-        //public virtual File File { get; set; } = null!;
+        public string? FileUrl { get; set; }
 
-        //public virtual Owner? Owner { get; set; }
+        public string? OwnerName { get; set; }
     }
 }
