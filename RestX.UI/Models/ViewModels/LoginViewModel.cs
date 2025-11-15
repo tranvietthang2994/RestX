@@ -39,5 +39,6 @@ namespace RestX.UI.Models.ViewModels
         public Guid OwnerId { get; set; }
         public int TableId { get; set; }
         public string? ErrorMessage { get; set; }
+        public string? ReturnUrl { get; set; }
     }
 }

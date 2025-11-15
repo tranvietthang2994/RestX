@@ -9,5 +9,10 @@ namespace RestX.UI.Models.ApiModels
 
         [Required(ErrorMessage = "Phone is required")]
         public string Phone { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "OwnerId is required")]
+        public Guid OwnerId { get; set; }
+
+        public string? ReturnUrl { get; set; }
     }
 }

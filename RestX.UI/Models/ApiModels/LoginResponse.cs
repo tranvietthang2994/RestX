@@ -8,6 +8,7 @@ namespace RestX.UI.Models.ApiModels
         public string? RefreshToken { get; set; }
         public DateTime? ExpiresAt { get; set; }
         public UserInfo? User { get; set; }
+        public CustomerSummary? Customer { get; set; }
     }
 
     public class UserInfo
@@ -20,5 +21,14 @@ namespace RestX.UI.Models.ApiModels
         public Guid? OwnerId { get; set; } // For Staff and Owner
         public Guid? StaffId { get; set; } // For Staff
         public Guid? CustomerId { get; set; } // For Customer
+        public string Phone { get; set; } = string.Empty;
+    }
+
+    public class CustomerSummary
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public int? Point { get; set; }
     }
 }

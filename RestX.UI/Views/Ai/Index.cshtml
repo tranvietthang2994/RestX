@@ -1,7 +1,12 @@
-﻿@{
+﻿@model RestX.UI.Controllers.AiAssistantViewModel
+@using System.Text.Json
+@using RestX.UI.Controllers
+@{
     ViewData["Title"] = "AI Gợi Ý Món Ăn";
     var ownerId = ViewBag.OwnerId as Guid?;
     var tableId = ViewBag.TableId as int?;
+    var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+    var availableDishesJson = JsonSerializer.Serialize(Model?.AvailableDishes ?? new List<AiDishInfo>(), jsonOptions);
 }
 
 <style>
@@ -223,6 +228,74 @@
         transform: none;
     }
 
+    .ai-suggestion-actions {
+        margin-top: 3vw;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2.5vw;
+        align-items: center;
+    }
+
+    .ai-suggestion-price {
+        font-weight: 600;
+        color: #28a745;
+        font-size: clamp(0.85rem, 3.5vw, 1rem);
+    }
+
+    .ai-suggestion-actions-list {
+        margin-top: 4vw;
+        display: flex;
+        flex-direction: column;
+        gap: 3vw;
+    }
+
+    .ai-suggestion-actions-title {
+        font-weight: 600;
+        font-size: clamp(0.9rem, 3.8vw, 1.1rem);
+        color: #495057;
+        margin-bottom: 1vw;
+    }
+
+    .add-to-cart-btn {
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 5vw;
+        padding: 2.5vw 5vw;
+        cursor: pointer;
+        transition: background 0.2s, transform 0.2s;
+        font-size: clamp(0.8rem, 3.5vw, 1rem);
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        gap: 1vw;
+    }
+
+    .add-to-cart-btn:hover:not(:disabled) {
+        background: #218838;
+        transform: translateY(-1px);
+    }
+
+    .add-to-cart-btn:disabled {
+        background: #94d3a2;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .add-to-cart-btn.added {
+        background: #1e7e34;
+    }
+
+    .ai-notice {
+        background: #fff4ce;
+        border: 1px solid #ffe08a;
+        border-radius: 4vw;
+        padding: 4vw;
+        margin: 4vw 0;
+        color: #8a6d3b;
+        font-size: clamp(0.85rem, 3.5vw, 1rem);
+    }
+
     .typing-indicator {
         display: none;
         align-items: center;
@@ -357,20 +430,20 @@
     }
 </style>
 
-@if (ownerId.HasValue && tableId.HasValue)
-{
-    <a href="/Home/Index/@ownerId/@tableId" class="back-btn">← Quay lại</a>
-}
-else
-{
-    <a href="/Home/Index" class="back-btn">← Quay lại</a>
-}
+<button type="button" class="back-btn" id="aiBackButton">← Quay lại</button>
 <div class="ai-chat-container">
     <!-- Header -->
     <div class="chat-header">
         <h2>🤖 AI Gợi Ý Món Ăn</h2>
         <p>Tôi sẽ giúp bạn tìm món ăn phù hợp nhất dựa trên sở thích của bạn!</p>
     </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model?.ErrorMessage))
+    {
+        <div class="ai-notice">
+            @Model.ErrorMessage
+        </div>
+    }
 
     <!-- Body -->
     <div class="chat-body">
@@ -421,12 +494,28 @@ else
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
 <script>
+const aiContext = {
+    ownerId: '@(ownerId?.ToString() ?? string.Empty)',
+    tableId: @Html.Raw(tableId.HasValue ? tableId.Value.ToString() : "null")
+};
+const aiAvailableDishes = @Html.Raw(string.IsNullOrWhiteSpace(availableDishesJson) ? "[]" : availableDishesJson);
+
 class AiChat {
     constructor() {
         this.currentMode = 'suggestion';
         this.conversationHistory = '';
+        this.availableDishes = (aiAvailableDishes || []).map(dish => {
+            const numericPrice = Number(dish.price);
+            return {
+                ...dish,
+                numericPrice: Number.isFinite(numericPrice) ? numericPrice : null,
+                normalizedName: (dish.name || '').toLowerCase()
+            };
+        });
         this.initializeElements();
         this.attachEventListeners();
+        this.handleAddToCartClick = this.handleAddToCartClick.bind(this);
+        document.addEventListener('click', this.handleAddToCartClick);
     }
 
     initializeElements() {
@@ -483,7 +572,11 @@ class AiChat {
 
     async sendMessage() {
         const message = this.messageInput.value.trim();
-        if (!message) return;
+        if (!message) {
+            return;
+        }
+
+        const isSuggestionMode = this.currentMode === 'suggestion';
 
         // Clear input
         this.messageInput.value = '';
@@ -496,7 +589,7 @@ class AiChat {
         }
 
         // Add user message
-        this.addMessage(message, 'user');
+        this.addMessage(message, 'user', { isSuggestion: isSuggestionMode });
 
         // Show typing indicator
         this.showTyping();
@@ -505,27 +598,35 @@ class AiChat {
         this.sendButton.disabled = true;
 
         try {
-            const response = await this.callAiApi(message);
+            const response = await this.callAiApi(message, isSuggestionMode);
             this.hideTyping();
-            this.addMessage(response, 'ai');
-            
+            this.addMessage(response, 'ai', { isSuggestion: isSuggestionMode });
+
             // Update conversation history
             this.conversationHistory += `User: ${message}\nAI: ${response}\n\n`;
         } catch (error) {
             this.hideTyping();
             this.addMessage('Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau. 😔', 'ai');
-            console.error('Error:', error);
+            console.error('AI error:', error);
         } finally {
             this.sendButton.disabled = false;
         }
     }
 
-    async callAiApi(message) {
-        const endpoint = this.currentMode === 'suggestion' ? '/Ai/GetSuggestions' : '/Ai/Chat';
+    async callAiApi(message, isSuggestionMode) {
+        const endpoint = isSuggestionMode ? '/Ai/GetSuggestions' : '/Ai/Chat';
         const requestData = {
             message: message,
             conversationHistory: this.conversationHistory
         };
+
+        if (aiContext.ownerId) {
+            requestData.ownerId = aiContext.ownerId;
+        }
+
+        if (aiContext.tableId !== null) {
+            requestData.tableId = aiContext.tableId;
+        }
 
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -535,16 +636,21 @@ class AiChat {
             body: JSON.stringify(requestData)
         });
 
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || response.statusText);
+        }
+
         const data = await response.json();
-        
+
         if (data.success) {
             return data.response;
-        } else {
-            throw new Error(data.error || 'Unknown error');
         }
+
+        throw new Error(data.error || 'Unknown error');
     }
 
-    addMessage(content, sender) {
+    addMessage(content, sender, options = {}) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}`;
 
@@ -554,13 +660,209 @@ class AiChat {
 
         const messageContent = document.createElement('div');
         messageContent.className = 'message-content';
-        messageContent.textContent = content;
+        messageContent.innerHTML = this.formatMessage(content, sender, options);
+
+        if (sender === 'ai' && options.isSuggestion) {
+            this.appendSuggestedDishButtons(messageContent, content);
+        }
 
         messageDiv.appendChild(avatar);
         messageDiv.appendChild(messageContent);
 
         this.chatMessages.appendChild(messageDiv);
         this.scrollToBottom();
+    }
+
+    formatMessage(content, sender, options) {
+        const rawText = content ?? '';
+
+        if (sender === 'ai' && options.isSuggestion) {
+            return this.formatSuggestion(rawText);
+        }
+
+        return this.escapeHtml(rawText).replace(/\n/g, '<br>');
+    }
+
+    formatSuggestion(rawContent) {
+        if (!rawContent) {
+            return '';
+        }
+
+        const paragraphs = rawContent
+            .split(/\n\s*\n/)
+            .map(paragraph => paragraph.trim())
+            .filter(paragraph => paragraph.length > 0);
+
+        if (paragraphs.length === 0) {
+            return this.escapeHtml(rawContent).replace(/\n/g, '<br>');
+        }
+
+        return paragraphs
+            .map(paragraph => `<p>${this.escapeHtml(paragraph).replace(/\n/g, '<br>')}</p>`)
+            .join('');
+    }
+
+    formatPrice(price) {
+        try {
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+        } catch {
+            return `${price?.toLocaleString?.('vi-VN') ?? price}đ`;
+        }
+    }
+
+    escapeHtml(text) {
+        if (text === null || text === undefined) {
+            return '';
+        }
+
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    escapeAttribute(text) {
+        return this.escapeHtml(text).replace(/\n/g, ' ');
+    }
+
+    extractSuggestedDishes(rawContent) {
+        if (!rawContent || this.availableDishes.length === 0) {
+            return [];
+        }
+
+        const normalizedText = rawContent.toLowerCase();
+        const matched = [];
+        const seen = new Set();
+
+        this.availableDishes.forEach(dish => {
+            if (!dish.normalizedName) {
+                return;
+            }
+
+            if (normalizedText.includes(dish.normalizedName)) {
+                const key = String(dish.id);
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    matched.push(dish);
+                }
+            }
+        });
+
+        return matched;
+    }
+
+    appendSuggestedDishButtons(container, rawContent) {
+        const matchedDishes = this.extractSuggestedDishes(rawContent);
+        if (!matchedDishes.length) {
+            return;
+        }
+
+        const actionsList = document.createElement('div');
+        actionsList.className = 'ai-suggestion-actions-list';
+
+        const title = document.createElement('div');
+        title.className = 'ai-suggestion-actions-title';
+        title.textContent = 'Thêm nhanh các món gợi ý:';
+        actionsList.appendChild(title);
+
+        matchedDishes.forEach(dish => {
+            const row = document.createElement('div');
+            row.className = 'ai-suggestion-actions';
+
+            const priceLabel = dish.numericPrice !== null
+                ? this.formatPrice(dish.numericPrice)
+                : (dish.price ? this.escapeHtml(String(dish.price)) : null);
+
+            if (priceLabel) {
+                const priceSpan = document.createElement('span');
+                priceSpan.className = 'ai-suggestion-price';
+                priceSpan.textContent = `Giá: ${priceLabel}`;
+                row.appendChild(priceSpan);
+            }
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'add-to-cart-btn';
+            button.dataset.dishId = dish.id;
+            button.dataset.dishName = dish.name;
+            button.textContent = '🛒 Thêm vào giỏ hàng';
+
+            row.appendChild(button);
+            actionsList.appendChild(row);
+        });
+
+        container.appendChild(actionsList);
+    }
+
+    async handleAddToCartClick(event) {
+        const button = event.target.closest('.add-to-cart-btn');
+        if (!button) {
+            return;
+        }
+
+        const dishId = button.dataset.dishId;
+        const dishName = button.dataset.dishName || '';
+
+        if (!dishId) {
+            return;
+        }
+
+        await this.addDishToCart(dishId, dishName, button);
+    }
+
+    async addDishToCart(dishId, dishName, button) {
+        const originalText = button.dataset.originalText || button.textContent;
+        button.dataset.originalText = originalText;
+        button.disabled = true;
+        button.textContent = 'Đang thêm...';
+
+        try {
+            const response = await fetch('/Cart/AddToCart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                },
+                body: new URLSearchParams({
+                    dishId: dishId,
+                    quantity: 1
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                button.textContent = 'Đã thêm vào giỏ ✓';
+                button.classList.add('added');
+
+                setTimeout(() => {
+                    button.classList.remove('added');
+                    button.disabled = false;
+                    button.textContent = originalText;
+                }, 2500);
+
+                return;
+            }
+
+            if (data.requiresLogin) {
+                button.disabled = false;
+                button.textContent = originalText;
+                const message = data.message || 'Bạn cần đăng nhập để thêm món vào giỏ hàng.';
+                const shouldRedirect = window.confirm(`${message}\nBạn có muốn đăng nhập ngay không?`);
+                if (shouldRedirect && data.loginUrl) {
+                    window.location.href = data.loginUrl;
+                }
+                return;
+            }
+
+            throw new Error(data.message || 'Không thể thêm món vào giỏ.');
+        } catch (error) {
+            console.error('Add to cart error:', error);
+            button.disabled = false;
+            button.textContent = originalText;
+            window.alert(error.message || 'Không thể thêm món vào giỏ. Vui lòng thử lại.');
+        }
     }
 
     showTyping() {
@@ -575,10 +877,26 @@ class AiChat {
     scrollToBottom() {
         this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
     }
+
+    destroy() {
+        document.removeEventListener('click', this.handleAddToCartClick);
+    }
 }
 
-// Initialize chat when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new AiChat();
+    const chatInstance = new AiChat();
+
+    const backButton = document.getElementById('aiBackButton');
+    if (backButton) {
+        backButton.addEventListener('click', () => {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = '/';
+            }
+        });
+    }
+
+    window.addEventListener('beforeunload', () => chatInstance.destroy());
 });
 </script>

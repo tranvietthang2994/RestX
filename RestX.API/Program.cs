@@ -244,6 +244,7 @@ using RestX.API.Data.Repository.Interfaces;
 using RestX.API.Hubs;
 using RestX.API.Services.Implementations;
 using RestX.API.Services.Interfaces;
+using RestX.API.Models.Configuration;
 using RestX.API.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -272,8 +273,11 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// 🟩 Tạm thời bỏ xác thực để test API/UI
-//builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+// JWT configuration and services
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+builder.Services.AddScoped<IJwtService, JwtService>();
+
+// (Optional) Authentication/Authorization can be re-enabled when ready
 //builder.Services.AddAuthentication(...);
 //builder.Services.AddAuthorization();
 
@@ -388,8 +392,8 @@ app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 app.UseRouting();
 
-// 🟨 Comment xác thực để test
-//app.UseSession();
+// 🟨 Session is needed for AuthCustomerService and AuthController
+app.UseSession();
 //app.UseAuthentication();
 //app.UseAuthorization();
 
