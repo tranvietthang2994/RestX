@@ -134,11 +134,30 @@ namespace RestX.UI.Controllers
             {
                 var ownerIdString = HttpContext.Session.GetString("OwnerId");
                 var tableIdString = HttpContext.Session.GetString("TableId");
+                var customerId = HttpContext.Session.GetString("CustomerId");
 
                 if (!Guid.TryParse(ownerIdString, out var ownerId) || 
                     !int.TryParse(tableIdString, out var tableId))
                 {
                     return Json(new { success = false, message = "Invalid session data" });
+                }
+
+                if (string.IsNullOrEmpty(customerId))
+                {
+                    var loginUrl = Url.Action("Login", "AuthCustomer", new
+                    {
+                        ownerId,
+                        tableId,
+                        returnUrl = Url.Action("Index", "Ai", new { ownerId, tableId })
+                    });
+
+                    return Json(new
+                    {
+                        success = false,
+                        requiresLogin = true,
+                        loginUrl,
+                        message = "Bạn cần đăng nhập để thêm món vào giỏ hàng."
+                    });
                 }
 
                 var cart = await _cartService.AddToCartAsync(ownerId, tableId, dishId, quantity);

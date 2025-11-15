@@ -24,12 +24,13 @@ namespace RestX.UI.Controllers
         /// <returns></returns>
         [HttpGet]
         [Route("AuthCustomer/Login/{ownerId:guid}/{tableId:int}")]
-        public IActionResult Login(Guid ownerId, int tableId)
+        public IActionResult Login(Guid ownerId, int tableId, string? returnUrl = null)
         {
             var model = new CustomerLoginViewModel
             {
                 OwnerId = ownerId,
-                TableId = tableId
+                TableId = tableId,
+                ReturnUrl = returnUrl
             };
 
             return View(model);
@@ -38,14 +39,15 @@ namespace RestX.UI.Controllers
         /// <summary>
         /// Process customer login
         /// </summary>
-        /// <param name="model">Customer login view model</param>
-        /// <returns></returns>
         [HttpPost]
         [Route("AuthCustomer/Login/{ownerId:guid}/{tableId:int}")]
-        public async Task<IActionResult> Login(CustomerLoginViewModel model)
+        public async Task<IActionResult> Login(Guid ownerId, int tableId, CustomerLoginViewModel model)
         {
             try
             {
+                model.OwnerId = ownerId;
+                model.TableId = tableId;
+
                 if (!ModelState.IsValid)
                 {
                     return View(model);
@@ -56,7 +58,9 @@ namespace RestX.UI.Controllers
                 var loginRequest = new CustomerLoginRequest
                 {
                     Name = model.Name,
-                    Phone = model.Phone
+                    Phone = model.Phone,
+                    OwnerId = ownerId,
+                    ReturnUrl = model.ReturnUrl
                 };
 
                 var response = await _authService.CustomerLoginAsync(loginRequest);
@@ -67,13 +71,20 @@ namespace RestX.UI.Controllers
                     HttpContext.Session.SetString("CustomerId", response.User.Id.ToString());
                     HttpContext.Session.SetString("CustomerName", response.User.Name);
                     HttpContext.Session.SetString("CustomerPhone", model.Phone);
+                    HttpContext.Session.SetString("OwnerId", ownerId.ToString());
+                    HttpContext.Session.SetString("TableId", tableId.ToString());
 
                     _logger.LogInformation("Customer login successful: {CustomerName}", model.Name);
                     _logger.LogInformation("Session CustomerId: {CustomerId}", HttpContext.Session.GetString("CustomerId"));
 
                     // Redirect back to home/menu
                     TempData["Message"] = $"Welcome, {response.User.Name}!";
-                    return RedirectToAction("Index", "Home", new { ownerId = model.OwnerId, tableId = model.TableId });
+                    var redirectUrl = model.ReturnUrl;
+                    if (!string.IsNullOrEmpty(redirectUrl) && Url.IsLocalUrl(redirectUrl))
+                    {
+                        return Redirect(redirectUrl);
+                    }
+                    return RedirectToAction("Index", "Home", new { ownerId, tableId });
                 }
                 else
                 {
@@ -100,23 +111,18 @@ namespace RestX.UI.Controllers
             try
             {
                 var customerName = HttpContext.Session.GetString("CustomerName");
+                var ownerIdString = HttpContext.Session.GetString("OwnerId");
+                var tableIdString = HttpContext.Session.GetString("TableId");
                 
                 // Clear local session
                 HttpContext.Session.Remove("CustomerId");
                 HttpContext.Session.Remove("CustomerName");
                 HttpContext.Session.Remove("CustomerPhone");
 
-                // Call API logout (optional for customer)
-                await _authService.LogoutAsync();
-
                 _logger.LogInformation("Customer logout: {CustomerName}", customerName);
 
                 TempData["Message"] = "You have been logged out successfully.";
                 
-                // Get redirect parameters from session if available
-                var ownerIdString = HttpContext.Session.GetString("OwnerId");
-                var tableIdString = HttpContext.Session.GetString("TableId");
-
                 if (Guid.TryParse(ownerIdString, out var ownerId) && 
                     int.TryParse(tableIdString, out var tableId))
                 {

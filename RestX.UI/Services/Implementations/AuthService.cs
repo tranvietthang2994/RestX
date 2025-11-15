@@ -54,12 +54,35 @@ namespace RestX.UI.Services.Implementations
             {
                 _logger.LogInformation("Attempting customer login for: {Name} - {Phone}", request.Name, request.Phone);
                 
-                var response = await _apiService.PostAsync<CustomerLoginRequest, LoginResponse>("api/auth/customer-login", request);
-                
-                if (response?.Success == true && !string.IsNullOrEmpty(response.AccessToken))
+                var response = await _apiService.PostAsync<CustomerLoginRequest, LoginResponse>("api/AuthCustomer/login", request);
+
+                if (response == null || !response.Success)
                 {
-                    StoreAuthTokens(response);
-                    _apiService.SetAuthToken(response.AccessToken);
+                    _logger.LogWarning("Primary customer login endpoint failed. Falling back to legacy endpoint.");
+                    response = await _apiService.PostAsync<CustomerLoginRequest, LoginResponse>("api/auth/customer-login", request);
+                }
+                
+                if (response?.Success == true)
+                {
+                    if (response.User == null && response.Customer != null)
+                    {
+                        response.User = new UserInfo
+                        {
+                            Id = response.Customer.Id,
+                            Name = response.Customer.Name,
+                            Username = response.Customer.Phone,
+                            Phone = response.Customer.Phone,
+                            Role = "Customer",
+                            CustomerId = response.Customer.Id
+                        };
+                    }
+
+                    if (!string.IsNullOrEmpty(response.AccessToken))
+                    {
+                        StoreAuthTokens(response);
+                        _apiService.SetAuthToken(response.AccessToken);
+                    }
+
                     _logger.LogInformation("Customer login successful for: {Name}", request.Name);
                 }
                 

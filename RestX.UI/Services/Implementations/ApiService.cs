@@ -65,19 +65,29 @@ namespace RestX.UI.Services.Implementations
 
                 var response = await _httpClient.PostAsync(endpoint, content);
                 
+                var responseJson = await response.Content.ReadAsStringAsync();
+                _logger.LogDebug("POST response ({StatusCode}): {Json}", response.StatusCode, responseJson);
+
                 if (response.IsSuccessStatusCode)
                 {
-                    var responseJson = await response.Content.ReadAsStringAsync();
-                    _logger.LogDebug("POST response: {Json}", responseJson);
                     return JsonSerializer.Deserialize<TResponse>(responseJson, _jsonOptions);
                 }
-                else
+
+                _logger.LogWarning("POST request to {Endpoint} failed with status: {StatusCode}", endpoint, response.StatusCode);
+
+                try
                 {
-                    _logger.LogWarning("POST request failed with status: {StatusCode}", response.StatusCode);
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    _logger.LogWarning("Error content: {ErrorContent}", errorContent);
+                    var errorResponse = JsonSerializer.Deserialize<TResponse>(responseJson, _jsonOptions);
+                    if (errorResponse != null)
+                    {
+                        return errorResponse;
+                    }
                 }
-                
+                catch (Exception deserializeEx)
+                {
+                    _logger.LogWarning(deserializeEx, "Failed to deserialize error response for {Endpoint}", endpoint);
+                }
+
                 return default;
             }
             catch (Exception ex)

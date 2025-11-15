@@ -2,7 +2,9 @@
 @{
     ViewData["Title"] = "Đăng nhập";
     Layout = null;
-    var tableId = ViewBag.TableId as int?;
+    var ownerId = Model.OwnerId;
+    var tableId = Model.TableId;
+    var returnUrl = Model.ReturnUrl;
 }
 
 <!DOCTYPE html>
@@ -223,7 +225,7 @@
     </div>
 
     <div class="login-container">
-        <a href="@Url.Action("Index", "Home", new { ownerId = Model.OwnerId, tableId = tableId ?? 1 })"
+        <a href="@Url.Action("Index", "Home", new { ownerId = ownerId, tableId = tableId })"
            class="back-link">← Quay lại trang chủ</a>
 
         <div class="login-header">
@@ -231,27 +233,33 @@
             <p>Nhập thông tin để tích lũy điểm và nhận ưu đãi</p>
         </div>
 
+        @if (!string.IsNullOrEmpty(Model?.ErrorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @Model.ErrorMessage
+            </div>
+        }
+
         <div class="points-info">
             <span class="icon">🎁</span>
             <p>Đăng nhập để tích lũy điểm và nhận những ưu đãi hấp dẫn!</p>
         </div>
 
-        <form asp-controller="AuthCustomer" asp-action="Login" asp-route-ownerId="@Model.OwnerId" asp-route-tableId="@(tableId ?? 1)" method="post">
+        <form asp-controller="AuthCustomer" asp-action="Login" asp-route-ownerId="@ownerId" asp-route-tableId="@tableId" method="post">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="OwnerId" />
-            @* <input type="hidden" asp-for="ReturnUrl" /> *@
+            <input type="hidden" asp-for="TableId" />
+            <input type="hidden" asp-for="ReturnUrl" />
 
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
             <div class="form-group">
-                <label asp-for="Phone" class="d-none"></label>
                 <input asp-for="Phone" class="form-control" placeholder="Số điện thoại *" type="tel" required id="phoneInput" />
                 <span asp-validation-for="Phone" class="text-danger"></span>
                 <div id="phoneStatus" class="phone-status"></div>
             </div>
 
             <div class="form-group">
-                <label asp-for="Name" class="d-none"></label>
                 <input asp-for="Name" class="form-control" placeholder="Tên của bạn" id="nameInput" />
                 <span asp-validation-for="Name" class="text-danger"></span>
             </div>
