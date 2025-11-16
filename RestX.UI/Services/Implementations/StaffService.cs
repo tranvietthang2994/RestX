@@ -19,7 +19,7 @@ namespace RestX.UI.Services.Implementations
             try
             {
                 _logger.LogInformation("Calling API: Staff/customer-requests");
-                var apiUrl = "Staff/customer-requests";
+                var apiUrl = "api/Staff/customer-requests";
 
                 var response = await _apiService.GetAsync<ApiResponse<CustomerRequestViewModel>>(apiUrl);
 
@@ -44,7 +44,7 @@ namespace RestX.UI.Services.Implementations
         {
             try
             {
-                var apiUrl = "Staff/table-status";
+                var apiUrl = "api/Staff/table-status";
                 _logger.LogInformation("Calling API: {Url}", apiUrl);
 
                 var response = await _apiService.GetAsync<ApiResponse<IEnumerable<TableStatusViewModel>>>(apiUrl);
@@ -78,7 +78,7 @@ namespace RestX.UI.Services.Implementations
             try
             {
                 _logger.LogInformation("Calling API: Staff/menu");
-                var apiUrl = "Staff/menu";
+                var apiUrl = "api/Staff/menu";
 
                 var response = await _apiService.GetAsync<ApiResponse<MenuViewModel>>(apiUrl);
 
@@ -99,7 +99,7 @@ namespace RestX.UI.Services.Implementations
 
         public async Task<StaffProfileAPIViewModel?> GetStaffProfileAsync()
         {
-            var response = await _apiService.GetAsync<ApiResponse<StaffProfileAPIViewModel>>("Staff/profile");
+            var response = await _apiService.GetAsync<ApiResponse<StaffProfileAPIViewModel>>("api/Staff/profile");
             return response?.Success == true ? response.Data : null;
         }
 
