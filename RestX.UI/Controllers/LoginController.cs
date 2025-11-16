@@ -237,7 +237,7 @@ namespace RestX.UI.Controllers
             return role?.ToLower() switch
             {
                 "owner" => RedirectToAction("Index", "Owner"),
-                "staff" => RedirectToAction("Index", "Staff"),
+                "staff" => RedirectToAction("StatusTable", "Staff"),
                 _ => RedirectToAction("Index", "Home")
             };
         }
