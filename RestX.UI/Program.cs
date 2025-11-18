@@ -10,6 +10,27 @@ builder.Services.AddControllersWithViews();
 // HTTP Context Accessor
 builder.Services.AddHttpContextAccessor();
 
+// Add Authentication and Authorization services
+builder.Services.AddAuthentication("Cookies")
+    .AddCookie("Cookies", options =>
+    {
+        options.LoginPath = "/Login";
+        options.LogoutPath = "/Logout";
+        options.AccessDeniedPath = "/Login";
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
+        options.SlidingExpiration = true;
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Owner", policy =>
+        policy.RequireRole("Owner"));
+    options.AddPolicy("Staff", policy =>
+        policy.RequireRole("Staff"));
+    options.AddPolicy("Customer", policy =>
+        policy.RequireRole("Customer"));
+});
+
 // Session for storing JWT tokens
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
@@ -62,8 +83,8 @@ app.UseStaticFiles();
 
 app.UseRouting();
 app.UseSession();
-//app.UseAuthentication();
-//app.UseAuthorization();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",

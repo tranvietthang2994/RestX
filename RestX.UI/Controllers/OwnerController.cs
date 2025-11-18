@@ -229,14 +229,15 @@ namespace RestX.UI.Controllers
                     return Json(new { success = false, message = "Invalid data provided" });
                 }
 
-                var success = await _ownerService.UpdateRestaurantInfoAsync(model);
-                
+                // Using the existing UpdateOwnerProfileAsync method since UpdateRestaurantInfoAsync doesn't exist
+                var (success, message) = await _ownerService.UpdateOwnerProfileAsync(model);
+
                 if (success)
                 {
-                    return Json(new { success = true, message = "Restaurant information updated successfully" });
+                    return Json(new { success = true, message = message ?? "Restaurant information updated successfully" });
                 }
-                
-                return Json(new { success = false, message = "Failed to update restaurant information" });
+
+                return Json(new { success = false, message = message ?? "Failed to update restaurant information" });
             }
             catch (Exception ex)
             {
@@ -244,5 +245,122 @@ namespace RestX.UI.Controllers
                 return Json(new { success = false, message = "An error occurred while updating restaurant information" });
             }
         }
+
+        [HttpGet]
+        public async Task<IActionResult> GetRevenueStatistics(DateTime? from = null, DateTime? to = null)
+        {
+            try
+            {
+                var statistics = await _ownerService.GetRevenueStatisticsAsync(from, to);
+
+                if (statistics == null)
+                {
+                    return Json(new { success = false, message = "Failed to load revenue statistics" });
+                }
+
+                if (!string.IsNullOrEmpty(statistics.ErrorMessage))
+                {
+                    return Json(new { success = false, message = statistics.ErrorMessage });
+                }
+
+                return Json(new { success = true, data = statistics });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting revenue statistics");
+                return Json(new { success = false, message = "An error occurred while loading revenue statistics" });
+            }
+        }
+
+        /// <summary>
+        /// Get order statistics
+        /// </summary>
+        /// <param name="from">From date</param>
+        /// <param name="to">To date</param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> GetOrderStatistics(DateTime? from = null, DateTime? to = null)
+        {
+            try
+            {
+                var statistics = await _ownerService.GetOrderStatisticsAsync(from, to);
+
+                if (statistics == null)
+                {
+                    return Json(new { success = false, message = "Failed to load order statistics" });
+                }
+
+                if (!string.IsNullOrEmpty(statistics.ErrorMessage))
+                {
+                    return Json(new { success = false, message = statistics.ErrorMessage });
+                }
+
+                return Json(new { success = true, data = statistics });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting order statistics");
+                return Json(new { success = false, message = "An error occurred while loading order statistics" });
+            }
+        }
+
+        /// <summary>
+        /// Get overview report
+        /// </summary>
+        /// <param name="period">Report period</param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> GetOverviewReport(string period = "month")
+        {
+            try
+            {
+                var report = await _ownerService.GetOverviewReportAsync(period);
+
+                if (report == null)
+                {
+                    return Json(new { success = false, message = "Failed to load overview report" });
+                }
+
+                if (!string.IsNullOrEmpty(report.ErrorMessage))
+                {
+                    return Json(new { success = false, message = report.ErrorMessage });
+                }
+
+                return Json(new { success = true, data = report });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting overview report");
+                return Json(new { success = false, message = "An error occurred while loading overview report" });
+            }
+        }
+
+        /// <summary>
+        /// Get top dishes
+        /// </summary>
+        /// <param name="limit">Number of dishes</param>
+        /// <param name="period">Period for statistics</param>
+        /// <returns></returns>
+        [HttpGet]
+        public async Task<IActionResult> GetTopDishes(int limit = 10, string period = "month")
+        {
+            try
+            {
+                var topDishes = await _ownerService.GetTopDishesAsync(limit, period);
+
+                if (topDishes == null)
+                {
+                    return Json(new { success = false, message = "Failed to load top dishes" });
+                }
+
+                return Json(new { success = true, data = topDishes });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting top dishes");
+                return Json(new { success = false, message = "An error occurred while loading top dishes" });
+            }
+        }
+
     }
 }

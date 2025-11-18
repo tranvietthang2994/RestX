@@ -7,217 +7,230 @@ namespace RestX.UI.Services.Implementations
     public class OwnerUIService : IOwnerUIService
     {
         private readonly IApiService _apiService;
-        private readonly IAuthService _authService;
         private readonly ILogger<OwnerUIService> _logger;
 
-        public OwnerUIService(
-            IApiService apiService,
-            IAuthService authService,
-            ILogger<OwnerUIService> logger)
+        public OwnerUIService(IApiService apiService, ILogger<OwnerUIService> logger)
         {
             _apiService = apiService;
-            _authService = authService;
             _logger = logger;
-        }
-
-        public async Task<OwnerProfileViewModel?> GetOwnerProfileAsync()
-        {
-            try
-            {
-                var currentUser = await _authService.GetCurrentUserAsync();
-                if (currentUser == null || currentUser.Role != "Owner")
-                {
-                    _logger.LogWarning("User is not authenticated or not an owner");
-                    return null;
-                }
-
-                var response = await _apiService.GetAsync<ApiResponse<OwnerApiModel>>($"api/owner/{currentUser.Id}");
-                
-                if (response?.Success == true && response.Data != null)
-                {
-                    return MapToOwnerProfileViewModel(response.Data, currentUser);
-                }
-                
-                _logger.LogWarning("Failed to get owner profile for user: {UserId}", currentUser.Id);
-                return new OwnerProfileViewModel 
-                { 
-                    ErrorMessage = response?.Message ?? "Failed to load owner profile" 
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting owner profile");
-                return new OwnerProfileViewModel 
-                { 
-                    ErrorMessage = "An error occurred while loading the profile" 
-                };
-            }
-        }
-
-        public async Task<(bool Success, string? Message)> UpdateOwnerProfileAsync(OwnerProfileViewModel model)
-        {
-            try
-            {
-                var currentUser = await _authService.GetCurrentUserAsync();
-                if (currentUser == null || currentUser.Role != "Owner")
-                {
-                    return (false, "Unauthorized access");
-                }
-
-                var updateData = new
-                {
-                    Id = model.Id,
-                    Name = model.Name,
-                    Address = model.Address,
-                    Information = model.Information,
-                    Phone = model.Phone,
-                    Email = model.Email,
-                    Website = model.Website,
-                    OpeningHours = model.OpeningHours,
-                    IsActive = model.IsActive,
-                    CurrentPassword = model.CurrentPassword,
-                    NewPassword = model.NewPassword
-                };
-
-                var response = await _apiService.PutAsync<object, ApiResponse>($"api/owner/{model.Id}", updateData);
-                
-                if (response?.Success == true)
-                {
-                    return (true, response.Message ?? "Profile updated successfully");
-                }
-                
-                return (false, response?.Message ?? "Failed to update profile");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating owner profile for ID: {OwnerId}", model.Id);
-                return (false, "An error occurred while updating the profile");
-            }
         }
 
         public async Task<DashboardViewModel?> GetDashboardAsync()
         {
             try
             {
-                var currentUser = await _authService.GetCurrentUserAsync();
-                if (currentUser == null || currentUser.Role != "Owner")
-                {
-                    _logger.LogWarning("User is not authenticated or not an owner");
-                    return null;
-                }
+                _logger.LogInformation("Getting dashboard data from API");
 
-                var response = await _apiService.GetAsync<ApiResponse<DashboardApiModel>>($"api/owner/dashboard/{currentUser.Id}");
-                
+                var response = await _apiService.GetAsync<ApiResponse<DashboardViewModel>>("api/owner/dashboard");
+
                 if (response?.Success == true && response.Data != null)
                 {
-                    return MapToDashboardViewModel(response.Data);
+                    _logger.LogInformation("Dashboard data retrieved successfully");
+                    return response.Data;
                 }
-                
-                _logger.LogWarning("Failed to get dashboard data for owner: {OwnerId}", currentUser.Id);
-                return new DashboardViewModel 
-                { 
-                    ErrorMessage = response?.Message ?? "Failed to load dashboard data" 
+
+                _logger.LogWarning("Failed to retrieve dashboard data: {Message}", response?.Message);
+                return new DashboardViewModel
+                {
+                    ErrorMessage = response?.Message ?? "Failed to load dashboard data"
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting dashboard data");
-                return new DashboardViewModel 
-                { 
-                    ErrorMessage = "An error occurred while loading the dashboard" 
+                return new DashboardViewModel
+                {
+                    ErrorMessage = "An error occurred while loading dashboard data"
                 };
             }
         }
 
-        public async Task<OwnerProfileViewModel?> GetRestaurantInfoAsync(Guid ownerId)
+        public async Task<OwnerProfileViewModel?> GetOwnerProfileAsync()
         {
             try
             {
-                var response = await _apiService.GetAsync<ApiResponse<OwnerApiModel>>($"api/owner/{ownerId}");
-                
+                _logger.LogInformation("Getting owner profile from API");
+
+                var response = await _apiService.GetAsync<ApiResponse<OwnerProfileViewModel>>("api/owner/profile");
+
                 if (response?.Success == true && response.Data != null)
                 {
-                    return MapToOwnerProfileViewModel(response.Data);
+                    _logger.LogInformation("Owner profile retrieved successfully");
+                    return response.Data;
                 }
-                
-                _logger.LogWarning("Failed to get restaurant info for owner: {OwnerId}", ownerId);
-                return null;
+
+                _logger.LogWarning("Failed to retrieve owner profile: {Message}", response?.Message);
+                return new OwnerProfileViewModel
+                {
+                    ErrorMessage = response?.Message ?? "Failed to load profile data"
+                };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting restaurant info for owner: {OwnerId}", ownerId);
-                return null;
+                _logger.LogError(ex, "Error getting owner profile");
+                return new OwnerProfileViewModel
+                {
+                    ErrorMessage = "An error occurred while loading profile data"
+                };
             }
         }
 
-        public async Task<bool> UpdateRestaurantInfoAsync(OwnerProfileViewModel model)
+        public async Task<(bool Success, string Message)> UpdateOwnerProfileAsync(OwnerProfileViewModel profileModel)
         {
             try
             {
-                var updateData = new
-                {
-                    Id = model.Id,
-                    Name = model.Name,
-                    Address = model.Address,
-                    Information = model.Information,
-                    Phone = model.Phone,
-                    Email = model.Email,
-                    Website = model.Website,
-                    OpeningHours = model.OpeningHours,
-                    IsActive = model.IsActive
-                };
+                _logger.LogInformation("Updating owner profile");
 
-                var response = await _apiService.PutAsync<object, ApiResponse>($"api/owner/{model.Id}", updateData);
-                
-                return response?.Success == true;
+                var response = await _apiService.PutAsync<OwnerProfileViewModel, ApiResponse<object>>("api/owner/profile", profileModel);
+
+                if (response?.Success == true)
+                {
+                    _logger.LogInformation("Owner profile updated successfully");
+                    return (true, response.Message ?? "Profile updated successfully");
+                }
+
+                _logger.LogWarning("Failed to update owner profile: {Message}", response?.Message);
+                return (false, response?.Message ?? "Failed to update profile");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating restaurant info for ID: {OwnerId}", model.Id);
-                return false;
+                _logger.LogError(ex, "Error updating owner profile");
+                return (false, "An error occurred while updating profile");
             }
         }
 
-        #region Private Mapping Methods
-
-        private OwnerProfileViewModel MapToOwnerProfileViewModel(OwnerApiModel apiModel, UserInfo? userInfo = null)
+        public async Task<RevenueStatisticsViewModel?> GetRevenueStatisticsAsync(DateTime? from = null, DateTime? to = null)
         {
-            return new OwnerProfileViewModel
+            try
             {
-                Id = apiModel.Id,
-                Name = apiModel.Name,
-                Address = apiModel.Address,
-                Information = apiModel.Information,
-                IsActive = apiModel.IsActive,
-                CreatedDate = apiModel.CreatedDate,
-                ModifiedDate = apiModel.ModifiedDate,
-                Username = userInfo?.Username
-            };
+                _logger.LogInformation("Getting revenue statistics from API");
+
+                var endpoint = "api/owner/statistics/revenue";
+                if (from.HasValue || to.HasValue)
+                {
+                    var queryParams = new List<string>();
+                    if (from.HasValue) queryParams.Add($"from={from.Value:yyyy-MM-dd}");
+                    if (to.HasValue) queryParams.Add($"to={to.Value:yyyy-MM-dd}");
+                    endpoint += "?" + string.Join("&", queryParams);
+                }
+
+                var response = await _apiService.GetAsync<ApiResponse<RevenueStatisticsViewModel>>(endpoint);
+
+                if (response?.Success == true && response.Data != null)
+                {
+                    _logger.LogInformation("Revenue statistics retrieved successfully");
+                    return response.Data;
+                }
+
+                _logger.LogWarning("Failed to retrieve revenue statistics: {Message}", response?.Message);
+                return new RevenueStatisticsViewModel
+                {
+                    ErrorMessage = response?.Message ?? "Failed to load revenue statistics"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting revenue statistics");
+                return new RevenueStatisticsViewModel
+                {
+                    ErrorMessage = "An error occurred while loading revenue statistics"
+                };
+            }
         }
 
-        private DashboardViewModel MapToDashboardViewModel(DashboardApiModel apiModel)
+        public async Task<OrderStatisticsViewModel?> GetOrderStatisticsAsync(DateTime? from = null, DateTime? to = null)
         {
-            return new DashboardViewModel
+            try
             {
-                TotalRevenue = apiModel.TotalRevenue,
-                TotalOrders = apiModel.TotalOrders,
-                RecentOrders = apiModel.RecentOrders?.Select(MapToRecentOrderViewModel).ToList() ?? new List<RecentOrderViewModel>()
-            };
+                _logger.LogInformation("Getting order statistics from API");
+
+                var endpoint = "api/owner/statistics/orders";
+                if (from.HasValue || to.HasValue)
+                {
+                    var queryParams = new List<string>();
+                    if (from.HasValue) queryParams.Add($"from={from.Value:yyyy-MM-dd}");
+                    if (to.HasValue) queryParams.Add($"to={to.Value:yyyy-MM-dd}");
+                    endpoint += "?" + string.Join("&", queryParams);
+                }
+
+                var response = await _apiService.GetAsync<ApiResponse<OrderStatisticsViewModel>>(endpoint);
+
+                if (response?.Success == true && response.Data != null)
+                {
+                    _logger.LogInformation("Order statistics retrieved successfully");
+                    return response.Data;
+                }
+
+                _logger.LogWarning("Failed to retrieve order statistics: {Message}", response?.Message);
+                return new OrderStatisticsViewModel
+                {
+                    ErrorMessage = response?.Message ?? "Failed to load order statistics"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting order statistics");
+                return new OrderStatisticsViewModel
+                {
+                    ErrorMessage = "An error occurred while loading order statistics"
+                };
+            }
         }
 
-        private RecentOrderViewModel MapToRecentOrderViewModel(RecentOrderApiModel apiModel)
+        public async Task<OverviewReportViewModel?> GetOverviewReportAsync(string period = "month")
         {
-            return new RecentOrderViewModel
+            try
             {
-                OrderId = apiModel.OrderId,
-                CustomerName = apiModel.CustomerName,
-                TableName = apiModel.TableName,
-                Total = apiModel.Total,
-                Status = apiModel.Status,
-                OrderDate = apiModel.OrderDate
-            };
+                _logger.LogInformation("Getting overview report from API for period: {Period}", period);
+
+                var response = await _apiService.GetAsync<ApiResponse<OverviewReportViewModel>>($"api/owner/reports/overview?period={period}");
+
+                if (response?.Success == true && response.Data != null)
+                {
+                    _logger.LogInformation("Overview report retrieved successfully");
+                    return response.Data;
+                }
+
+                _logger.LogWarning("Failed to retrieve overview report: {Message}", response?.Message);
+                return new OverviewReportViewModel
+                {
+                    Period = period,
+                    ErrorMessage = response?.Message ?? "Failed to load overview report"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting overview report");
+                return new OverviewReportViewModel
+                {
+                    Period = period,
+                    ErrorMessage = "An error occurred while loading overview report"
+                };
+            }
         }
 
-        #endregion
+        public async Task<List<TopDishViewModel>?> GetTopDishesAsync(int limit = 10, string period = "month")
+        {
+            try
+            {
+                _logger.LogInformation("Getting top dishes from API with limit: {Limit}, period: {Period}", limit, period);
+
+                var response = await _apiService.GetAsync<ApiResponse<List<TopDishViewModel>>>($"api/owner/reports/top-dishes?limit={limit}&period={period}");
+
+                if (response?.Success == true && response.Data != null)
+                {
+                    _logger.LogInformation("Top dishes retrieved successfully");
+                    return response.Data;
+                }
+
+                _logger.LogWarning("Failed to retrieve top dishes: {Message}", response?.Message);
+                return new List<TopDishViewModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting top dishes");
+                return new List<TopDishViewModel>();
+            }
+        }
     }
 }
