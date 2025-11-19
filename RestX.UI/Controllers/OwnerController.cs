@@ -5,7 +5,7 @@ using RestX.UI.Services.Interfaces;
 
 namespace RestX.UI.Controllers
 {
-    [Authorize(Roles = "Owner")]
+    //[Authorize(Roles = "Owner")]
     public class OwnerController : Controller
     {
         private readonly IOwnerUIService _ownerService;
@@ -29,13 +29,13 @@ namespace RestX.UI.Controllers
             try
             {
                 _logger.LogInformation("Loading owner profile page");
-                
+
                 var profile = await _ownerService.GetOwnerProfileAsync();
-                
+
                 if (profile == null)
                 {
-                    return View("Error", new ErrorViewModel 
-                    { 
+                    return View("Error", new ErrorViewModel
+                    {
                         Message = "Unable to load owner profile",
                         StatusCode = 404
                     });
@@ -46,8 +46,8 @@ namespace RestX.UI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading owner profile page");
-                return View("Error", new ErrorViewModel 
-                { 
+                return View("Error", new ErrorViewModel
+                {
                     Message = "An error occurred while loading the profile"
                 });
             }
@@ -69,7 +69,7 @@ namespace RestX.UI.Controllers
                 }
 
                 var (success, message) = await _ownerService.UpdateOwnerProfileAsync(model);
-                
+
                 if (success)
                 {
                     TempData["SuccessMessage"] = message ?? "Profile updated successfully!";
@@ -106,7 +106,7 @@ namespace RestX.UI.Controllers
                 }
 
                 var (success, message) = await _ownerService.UpdateOwnerProfileAsync(model);
-                
+
                 return Json(new { success, message = message ?? (success ? "Profile updated successfully!" : "Update failed!") });
             }
             catch (Exception ex)
@@ -126,13 +126,13 @@ namespace RestX.UI.Controllers
             try
             {
                 _logger.LogInformation("Loading owner dashboard");
-                
+
                 var dashboard = await _ownerService.GetDashboardAsync();
-                
+
                 if (dashboard == null)
                 {
-                    return View("Error", new ErrorViewModel 
-                    { 
+                    return View("Error", new ErrorViewModel
+                    {
                         Message = "Unable to load dashboard data",
                         StatusCode = 500
                     });
@@ -140,8 +140,8 @@ namespace RestX.UI.Controllers
 
                 if (!string.IsNullOrEmpty(dashboard.ErrorMessage))
                 {
-                    return View("Error", new ErrorViewModel 
-                    { 
+                    return View("Error", new ErrorViewModel
+                    {
                         Message = dashboard.ErrorMessage
                     });
                 }
@@ -151,8 +151,8 @@ namespace RestX.UI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading owner dashboard");
-                return View("Error", new ErrorViewModel 
-                { 
+                return View("Error", new ErrorViewModel
+                {
                     Message = "An error occurred while loading the dashboard"
                 });
             }
@@ -168,12 +168,12 @@ namespace RestX.UI.Controllers
             try
             {
                 var dashboard = await _ownerService.GetDashboardAsync();
-                
+
                 if (dashboard != null && string.IsNullOrEmpty(dashboard.ErrorMessage))
                 {
                     return Json(new { success = true, data = dashboard });
                 }
-                
+
                 return Json(new { success = false, message = dashboard?.ErrorMessage ?? "Failed to load dashboard data" });
             }
             catch (Exception ex)
@@ -193,11 +193,11 @@ namespace RestX.UI.Controllers
             try
             {
                 var profile = await _ownerService.GetOwnerProfileAsync();
-                
+
                 if (profile == null)
                 {
-                    return View("Error", new ErrorViewModel 
-                    { 
+                    return View("Error", new ErrorViewModel
+                    {
                         Message = "Unable to load restaurant information"
                     });
                 }
@@ -207,8 +207,8 @@ namespace RestX.UI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading restaurant info page");
-                return View("Error", new ErrorViewModel 
-                { 
+                return View("Error", new ErrorViewModel
+                {
                     Message = "An error occurred while loading restaurant information"
                 });
             }
