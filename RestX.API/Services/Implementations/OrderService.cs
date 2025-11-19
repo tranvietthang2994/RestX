@@ -10,10 +10,12 @@ namespace RestX.API.Services.Implementations
     {
         private readonly IHttpContextAccessor httpContextAccessor;
         private readonly ICartService cartService;
-        public OrderService(IRepository repo, IHttpContextAccessor httpContextAccessor, ICartService cartService) : base(repo, httpContextAccessor)
+        private readonly ITableService tableService;
+        public OrderService(IRepository repo, IHttpContextAccessor httpContextAccessor, ICartService cartService, ITableService tableService) : base(repo, httpContextAccessor)
         {
             this.httpContextAccessor = httpContextAccessor;
             this.cartService = cartService;
+            this.tableService = tableService;
         }
 
         public async Task<UniversalValue<Guid>> CreatedOrder(CartViewModel model)
@@ -114,35 +116,54 @@ namespace RestX.API.Services.Implementations
         public async Task<CustomerRequestViewModel> GetCustomerRequestsByStaffAsync(CancellationToken cancellationToken = default)
         {
             var ownerId = UserHelper.GetCurrentOwnerId();
-            
+
             var orders = await Repo.GetAsync<Order>(
                 filter: o => o.OwnerId == ownerId && o.IsActive == true,
                 orderBy: q => q.OrderByDescending(o => o.Time),
-                includeProperties: "Customer,Table,OrderStatus,OrderDetails,OrderDetails.Dish"
+                includeProperties: "Customer,Table,OrderStatus,OrderDetails,OrderDetails.Dish,Payments"
             );
 
             var customerRequestViewModel = new CustomerRequestViewModel
             {
-                Orders = orders.Select(order => new OrderRequestViewModel
+                Orders = orders.Select(order =>
                 {
-                    Id = order.Id,
-                    CustomerName = order.Customer?.Name ?? "Unknown",
-                    CustomerPhone = order.Customer?.Phone ?? "N/A",
-                    TableNumber = order.Table?.TableNumber ?? 0,
-                    OrderStatus = order.OrderStatus?.Name ?? "Unknown",
-                    OrderTime = order.Time,
-                    IsActive = order.IsActive ?? false,
-                    OrderDetails = order.OrderDetails?.Where(od => od.IsActive == true).Select(od => new OrderDetailRequestViewModel
+                    // Check if order has any successful payment
+                    var hasSuccessfulPayment = order.Payments?.Any(p =>
+                        p.IsActive == true &&
+                        (p.PayOSStatus == "PAID" || p.PayOSStatus == "COMPLETED")
+                    ) ?? false;
+
+                    var latestPayment = order.Payments?
+                        .Where(p => p.IsActive == true)
+                        .OrderByDescending(p => p.Time)
+                        .FirstOrDefault();
+
+                    return new OrderRequestViewModel
                     {
-                        Id = od.Id,
-                        DishId = od.DishId,
-                        DishName = od.Dish?.Name ?? "Unknown",
-                        Quantity = od.Quantity,
-                        Price = od.Price,
-                        IsActive = od.IsActive ?? false
-                    }).ToList() ?? new List<OrderDetailRequestViewModel>(),
-                    TotalAmount = order.OrderDetails?.Where(od => od.IsActive == true).Sum(od => od.Quantity * od.Price) ?? 0
-                }).ToList()
+                        Id = order.Id,
+                        CustomerName = order.Customer?.Name ?? "Unknown",
+                        CustomerPhone = order.Customer?.Phone ?? "N/A",
+                        TableNumber = order.Table?.TableNumber ?? 0,
+                        OrderStatus = order.OrderStatus?.Name ?? "Unknown",
+                        OrderStatusId = order.OrderStatusId,
+                        OrderTime = order.Time,
+                        IsActive = order.IsActive ?? false,
+                        IsPaid = hasSuccessfulPayment,
+                        PaymentStatus = latestPayment?.PayOSStatus ?? "UNPAID",
+                        OrderDetails = order.OrderDetails?.Where(od => od.IsActive == true).Select(od => new OrderDetailRequestViewModel
+                        {
+                            Id = od.Id,
+                            DishId = od.DishId,
+                            DishName = od.Dish?.Name ?? "Unknown",
+                            Quantity = od.Quantity,
+                            Price = od.Price,
+                            IsActive = od.IsActive ?? false
+                        }).ToList() ?? new List<OrderDetailRequestViewModel>(),
+                        TotalAmount = order.OrderDetails?.Where(od => od.IsActive == true).Sum(od => od.Quantity * od.Price) ?? 0
+                    };
+                })
+                .Where(o => !o.IsPaid) // Only show unpaid orders
+                .ToList()
             };
 
             return customerRequestViewModel;
@@ -193,6 +214,56 @@ namespace RestX.API.Services.Implementations
             }
 
             return cartViewModels;
+        }
+
+        public async Task<bool> UpdateOrderStatusAsync(Guid orderId, int newStatusId)
+        {
+            try
+            {
+                var orders = await Repo.GetAsync<Order>(
+                    filter: o => o.Id == orderId,
+                    includeProperties: "Table"
+                );
+
+                var order = orders.FirstOrDefault();
+                if (order == null)
+                {
+                    return false;
+                }
+
+                int oldStatusId = order.OrderStatusId;
+                order.OrderStatusId = newStatusId;
+
+                // Track which staff member made the change
+                order.ModifiedBy = StaffId?.ToString();
+                order.ModifiedDate = DateTime.UtcNow;
+
+                Repo.Update(order);
+                await Repo.SaveAsync();
+
+                // Auto-update table status when order is confirmed (Pending -> Preparing)
+                // Status IDs: 1=Pending, 2=Preparing, 3=Ready, 4=Completed
+                // Table Status IDs: 1=Available, 2=Occupied, 3=Reserved, 4=Cleaning
+                if (oldStatusId == 1 && newStatusId == 2)
+                {
+                    // When order moves from Pending to Preparing, mark table as Occupied
+                    try
+                    {
+                        await tableService.UpdateTableStatusAsync(order.TableId, 2); // 2 = Occupied
+                    }
+                    catch (Exception)
+                    {
+                        // Don't fail the order update if table update fails
+                        // Just log it silently
+                    }
+                }
+
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 }

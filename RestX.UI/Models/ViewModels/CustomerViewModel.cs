@@ -77,10 +77,13 @@ namespace RestX.UI.Models.ViewModels
         public string CustomerPhone { get; set; } = string.Empty;
         public int TableNumber { get; set; }
         public string OrderStatus { get; set; } = string.Empty;
+        public int OrderStatusId { get; set; }
         public DateTime? OrderTime { get; set; }
         public bool IsActive { get; set; }
         public List<OrderDetailRequestViewModel> OrderDetails { get; set; } = new();
         public decimal TotalAmount { get; set; }
+        public bool IsPaid { get; set; }
+        public string? PaymentStatus { get; set; }
     }
 
     public class OrderDetailRequestViewModel
