@@ -37,7 +37,13 @@
                             </span>
                         </div>
                         <div class="order-status">
-                            <span class="status-badge status-@order.OrderStatus.ToLower().Replace(" ", "-")">@order.OrderStatus</span>
+                            <div class="status-badges">
+                                <span class="status-badge status-@order.OrderStatus.ToLower().Replace(" ", "-")">@order.OrderStatus</span>
+                                @if (!order.IsPaid)
+                                {
+                                    <span class="payment-badge payment-unpaid">UNPAID</span>
+                                }
+                            </div>
                             <span class="total-amount">@order.TotalAmount.ToString("C")</span>
                         </div>
                     </div>
@@ -61,6 +67,20 @@
                         {
                             <button class="btn-action btn-edit" onclick="editOrderDetails('@order.Id')">
                                 <i class="ti ti-edit"></i> Edit Items
+                            </button>
+                        }
+                        @* Change Status button - moves to next status *@
+                        @if (order.OrderStatusId < 4)
+                        {
+                            var buttonText = order.OrderStatusId switch
+                            {
+                                1 => "Start Preparing",      // Pending -> Preparing
+                                2 => "Mark as Ready",        // Preparing -> Ready
+                                3 => "Complete Order",       // Ready -> Completed
+                                _ => "Update Status"
+                            };
+                            <button class="btn-action btn-confirm" onclick="confirmOrder('@order.Id', @order.OrderStatusId)" data-order-id="@order.Id" data-current-status="@order.OrderStatusId">
+                                <i class="ti ti-arrow-right"></i> @buttonText
                             </button>
                         }
                     </div>
@@ -157,12 +177,32 @@
             gap: 5px;
         }
 
+        .status-badges {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: flex-end;
+        }
+
         .status-badge {
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.8em;
             font-weight: 500;
             text-transform: uppercase;
+        }
+
+        .payment-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .payment-unpaid {
+            background: #ffe0e0;
+            color: #d32f2f;
         }
 
         .status-pending {
@@ -238,6 +278,15 @@
 
             .btn-edit:hover {
                 background: #e67e22;
+            }
+
+        .btn-confirm {
+            background: #27ae60;
+            color: white;
+        }
+
+            .btn-confirm:hover {
+                background: #229954;
             }
 
         .no-orders {

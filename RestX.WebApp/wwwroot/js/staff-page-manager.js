@@ -59,7 +59,10 @@ window.StaffPageManager = (function () {
     ) {
       console.log("Creating new SignalR connection...");
       signalRConnection = new signalR.HubConnectionBuilder()
-        .withUrl("/tableStatusHub")
+        .withUrl("https://localhost:7294/tableStatusHub", {
+          skipNegotiation: false,
+          withCredentials: true
+        })
         .configureLogging(signalR.LogLevel.Debug)
         .build();
 

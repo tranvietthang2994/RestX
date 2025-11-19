@@ -3,17 +3,20 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RestX.API.Data.Contexts;
 
 #nullable disable
 
-namespace RestX.API.Data.Migrations
+namespace RestX.API.Migrations
 {
     [DbContext(typeof(RestXRestaurantManagementContext))]
-    partial class RestXRestaurantManagementContextModelSnapshot : ModelSnapshot
+    [Migration("20251119070228_AddPayOSFields")]
+    partial class AddPayOSFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

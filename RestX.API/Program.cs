@@ -398,14 +398,21 @@ builder.Services.Configure<FormOptions>(options =>
     options.MultipartHeadersLengthLimit = int.MaxValue;
 });
 
-// CORS
+// CORS - Updated for SignalR compatibility
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins(
+                "https://localhost:7215",  // RestX.UI
+                "https://localhost:5001",  // RestX.WebApp
+                "https://localhost:7294",  // RestX.API
+                "http://localhost:5283",   // RestX.UI (HTTP)
+                "http://localhost:5000"    // RestX.WebApp (HTTP)
+              )
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials(); // Required for SignalR
     });
 });
 
