@@ -14,7 +14,7 @@ services:
       - "1433:1433"
     volumes:
       # Trỏ đúng vào thư mục data bạn đã tạo ở bước trước trên VPS
-      - ./sqlserver/data:/var/opt/mssql
+      - ../sqlserver/data:/var/opt/mssql
     networks:
       - restx-network
 
