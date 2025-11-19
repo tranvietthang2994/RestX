@@ -1,42 +1,61 @@
-services:
-  web:
-    build: ./RestX.WebApp
-    ports:
-      - "8081:8081"
-    container_name: webapp
-    networks:
-      - restx-net
-    environment:
-      - ASPNETCORE_URLS=http://+:8081
-    depends_on:
-      - sqlserver
-    volumes:
-      - ./RestX.WebApp/wwwroot/Uploads:/app/wwwroot/Uploads
+version: '3.8'
 
-  sqlserver:
+services:
+  # 1. Database
+  db:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sqlserver_container
+    container_name: restx_sql  # Đặt tên khớp với container bạn đang chạy
+    restart: always
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=MatKhauManh!2025
+      - MSSQL_PID=Express
     ports:
       - "1433:1433"
-    networks:
-      - restx-net
     volumes:
-      - sql_data:/var/opt/mssql
-    environment:
-      ACCEPT_EULA: "Y"
-      SA_PASSWORD: "YourStrong!Passw0rd"
-    restart: unless-stopped
-
-  proxy:
-    build: ./RevertProxy
-    ports:
-      - "80:80"
+      # Trỏ đúng vào thư mục data bạn đã tạo ở bước trước trên VPS
+      - ./sqlserver/data:/var/opt/mssql
     networks:
-      - restx-net
+      - restx-network
+
+  # 2. API Backend
+  api:
+    build:
+      context: .
+      dockerfile: RestX.API/Dockerfile
+    container_name: restx_api
+    restart: always
+    environment:
+      - ConnectionStrings__RestX=Server=db,1433;Database=RestX_RestaurantManagement;User Id=sa;Password=MatKhauManh!2025;TrustServerCertificate=True;
+      - ASPNETCORE_ENVIRONMENT=Production
+    ports:
+      - "5000:8080" # API sẽ chạy ở cổng 5000 của VPS
+    depends_on:
+      - db
+    networks:
+      - restx-network
+
+  # 3. UI Frontend (MVC)
+  ui:
+    build:
+      context: .
+      dockerfile: RestX.UI/Dockerfile
+    container_name: restx_ui
+    restart: always
+    environment:
+      # UI kết nối DB (nếu cần)
+      - ConnectionStrings__RestX=Server=db,1433;Database=RestX_RestaurantManagement;User Id=sa;Password=MatKhauManh!2025;TrustServerCertificate=True;
+      # UI gọi API qua tên service 'api'
+      - ApiSettings__BaseUrl=http://api:8080
+      - ASPNETCORE_ENVIRONMENT=Production
+    ports:
+      - "80:8080" # Web chính chạy ở cổng 80 (http mặc định)
+    depends_on:
+      - api
+    networks:
+      - restx-network
 
 networks:
-  restx-net:
+  restx-network:
+    name: restx-network
     driver: bridge
-
-volumes:
-  sql_data:
