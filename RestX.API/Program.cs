@@ -367,6 +367,7 @@ builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<QRCodeGenerator>();
 builder.Services.AddScoped<IAiService, AiService>();
 builder.Services.AddHttpClient<IAiService, AiService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 // Database
 builder.Services.AddDbContext<RestXRestaurantManagementContext>(options =>
