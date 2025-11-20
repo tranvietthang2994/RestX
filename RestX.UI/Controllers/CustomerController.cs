@@ -5,7 +5,8 @@ using RestX.UI.Services.Interfaces;
 
 namespace RestX.UI.Controllers
 {
-    [Authorize(Roles = "Owner,Staff")]
+    //[Authorize(Roles = "Owner,Staff")]
+    [Route("[controller]")]
     public class CustomerController : Controller
     {
         private readonly ICustomerUIService _customerService;
@@ -26,38 +27,38 @@ namespace RestX.UI.Controllers
         /// Customer management page
         /// </summary>
         /// <returns></returns>
-        [HttpGet]
-        public async Task<IActionResult> CustomersManagement()
+        [HttpGet]  // Matches /Customer
+        public async Task<IActionResult> Index()
         {
             try
             {
                 _logger.LogInformation("Loading customers management page");
-                
+
                 var customerManagement = await _customerService.GetCustomerManagementAsync();
-                
+
                 if (customerManagement == null)
                 {
-                    return View("Error", new ErrorViewModel 
-                    { 
+                    return View("Error", new ErrorViewModel
+                    {
                         Message = "Unable to load customer management data"
                     });
                 }
 
                 if (!string.IsNullOrEmpty(customerManagement.ErrorMessage))
                 {
-                    return View("Error", new ErrorViewModel 
-                    { 
+                    return View("Error", new ErrorViewModel
+                    {
                         Message = customerManagement.ErrorMessage
                     });
                 }
 
-                return View(customerManagement);
+                return View("~/Views/Management/CustomersManagement.cshtml", customerManagement);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading customers management page");
-                return View("Error", new ErrorViewModel 
-                { 
+                return View("Error", new ErrorViewModel
+                {
                     Message = "An error occurred while loading customers management"
                 });
             }
@@ -67,7 +68,7 @@ namespace RestX.UI.Controllers
         /// Get all customers as JSON
         /// </summary>
         /// <returns></returns>
-        [HttpGet]
+        [HttpGet("GetAll")]  // Matches /Customer/GetAll
         public async Task<IActionResult> GetCustomers()
         {
             try
@@ -87,7 +88,7 @@ namespace RestX.UI.Controllers
         /// </summary>
         /// <param name="customerId">Customer ID</param>
         /// <returns></returns>
-        [HttpGet]
+        [HttpGet("Get/{customerId:guid}")]  // Matches /Customer/Get/{guid}
         public async Task<IActionResult> GetCustomer(Guid customerId)
         {
             try
@@ -113,7 +114,7 @@ namespace RestX.UI.Controllers
         /// </summary>
         /// <param name="searchTerm">Search term</param>
         /// <returns></returns>
-        [HttpGet]
+        [HttpGet("Search")]  // Matches /Customer/Search?searchTerm=...
         public async Task<IActionResult> SearchCustomers(string searchTerm)
         {
             try
@@ -138,7 +139,7 @@ namespace RestX.UI.Controllers
         /// </summary>
         /// <param name="model">Customer data</param>
         /// <returns></returns>
-        [HttpPost]
+        [HttpPost("Create")]  // Matches /Customer/Create
         public async Task<IActionResult> CreateCustomer(CustomerViewModel model)
         {
             try
@@ -165,7 +166,7 @@ namespace RestX.UI.Controllers
         /// </summary>
         /// <param name="model">Updated customer data</param>
         /// <returns></returns>
-        [HttpPost]
+        [HttpPost("Update")]  // Matches /Customer/Update
         public async Task<IActionResult> UpdateCustomer(CustomerViewModel model)
         {
             try
@@ -188,12 +189,47 @@ namespace RestX.UI.Controllers
         }
 
         /// <summary>
+        /// Upsert customer (Create or Update)
+        /// </summary>
+        /// <param name="model">Customer data</param>
+        /// <returns></returns>
+        [HttpPost("Upsert")]  // Matches /Customer/Upsert
+        public async Task<IActionResult> UpsertCustomer(CustomerViewModel model)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                    return Json(new { success = false, message = string.Join(", ", errors) });
+                }
+
+                // If ID is empty or default Guid, it's a create operation
+                if (model.Id == Guid.Empty)
+                {
+                    var (createSuccess, createMessage) = await _customerService.CreateCustomerAsync(model);
+                    return Json(new { success = createSuccess, message = createMessage ?? (createSuccess ? "Customer created successfully" : "Failed to create customer") });
+                }
+                else
+                {
+                    var (updateSuccess, updateMessage) = await _customerService.UpdateCustomerAsync(model);
+                    return Json(new { success = updateSuccess, message = updateMessage ?? (updateSuccess ? "Customer updated successfully" : "Failed to update customer") });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error upserting customer: {CustomerName}", model.Name);
+                return Json(new { success = false, message = "An error occurred while saving the customer" });
+            }
+        }
+
+        /// <summary>
         /// Delete customer
         /// </summary>
         /// <param name="customerId">Customer ID</param>
         /// <returns></returns>
-        [HttpPost]
-        [Authorize(Roles = "Owner")]
+        [HttpDelete("Delete/{customerId:guid}")]  // Matches /Customer/Delete/{guid}
+        //[Authorize(Roles = "Owner")]
         public async Task<IActionResult> DeleteCustomer(Guid customerId)
         {
             try
@@ -219,7 +255,7 @@ namespace RestX.UI.Controllers
         /// </summary>
         /// <param name="customerId">Customer ID</param>
         /// <returns></returns>
-        [HttpGet]
+        [HttpGet("Orders/{customerId:guid}")]  // Matches /Customer/Orders/{guid}
         public async Task<IActionResult> GetCustomerOrders(Guid customerId)
         {
             try
@@ -239,7 +275,7 @@ namespace RestX.UI.Controllers
         /// </summary>
         /// <param name="customerId">Customer ID</param>
         /// <returns></returns>
-        [HttpGet]
+        [HttpGet("Details/{customerId:guid}")]  // Matches /Customer/Details/{guid}
         public async Task<IActionResult> Details(Guid customerId)
         {
             try
@@ -248,11 +284,7 @@ namespace RestX.UI.Controllers
                 
                 if (customer == null)
                 {
-                    return View("Error", new ErrorViewModel 
-                    { 
-                        Message = "Customer not found",
-                        StatusCode = 404
-                    });
+                    return Json(new { success = false, message = "Customer not found" });
                 }
 
                 // Get customer orders
@@ -261,15 +293,12 @@ namespace RestX.UI.Controllers
                 customer.TotalSpent = orders.Sum(o => o.TotalAmount);
                 customer.LastOrderDate = orders.OrderByDescending(o => o.OrderDate).FirstOrDefault()?.OrderDate;
 
-                return View(customer);
+                return Json(new { success = true, data = customer });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading customer details: {CustomerId}", customerId);
-                return View("Error", new ErrorViewModel 
-                { 
-                    Message = "An error occurred while loading customer details"
-                });
+                return Json(new { success = false, message = "An error occurred while loading customer details" });
             }
         }
 
@@ -277,7 +306,7 @@ namespace RestX.UI.Controllers
         /// Export customers to CSV
         /// </summary>
         /// <returns></returns>
-        [HttpGet]
+        [HttpGet("Export")]  // Matches /Customer/Export
         [Authorize(Roles = "Owner")]
         public async Task<IActionResult> ExportCustomers()
         {
