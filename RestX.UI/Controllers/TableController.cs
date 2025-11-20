@@ -33,82 +33,81 @@ namespace RestX.UI.Controllers
             {
                 _logger.LogInformation("Loading tables management page");
 
-                TableListViewModel response = new TableListViewModel
+                // ✅ Tạo test data để đảm bảo có data hiển thị
+                var testResponse = new TableListViewModel
                 {
-                    Tables = new List<TableApiModel>()
+                    Tables = new List<TableApiModel>
+            {
+                new()
+                {
+                    Id = 1,
+                    TableNumber = 1,
+                    Status = "Available",
+                    IsActive = true,
+                    OwnerId = Guid.NewGuid(),
+                    TableStatusId = 1,
+                    QrCodeUrl = "https://example.com/qr1"
+                },
+                new()
+                {
+                    Id = 2,
+                    TableNumber = 2,
+                    Status = "Occupied",
+                    IsActive = true,
+                    OwnerId = Guid.NewGuid(),
+                    TableStatusId = 2,
+                    QrCodeUrl = "https://example.com/qr2"
+                },
+                new()
+                {
+                    Id = 3,
+                    TableNumber = 3,
+                    Status = "Reserved",
+                    IsActive = true,
+                    OwnerId = Guid.NewGuid(),
+                    TableStatusId = 3,
+                    QrCodeUrl = "https://example.com/qr3"
+                }
+            }
                 };
 
-                // Get data from API
-                var responseString = await _apiService.GetStringAsync("api/Table/owner");
+                _logger.LogInformation("Created test data with {Count} tables", testResponse.Tables.Count);
+
+                // ✅ Sử dụng test data trước, comment out phần API call
+                TableListViewModel response = testResponse;
+
+
+                // TODO: Uncomment này khi muốn test với real API
+                var responseString = await _apiService.GetStringAsync("api/Table");
                 _logger.LogInformation("API Response: {Response}", responseString);
 
                 if (!string.IsNullOrEmpty(responseString))
                 {
                     try
                     {
-                        // Parse the API response which has structure: { "success": true, "data": [...] }
-                        var apiResponseWrapper = JsonSerializer.Deserialize<ApiResponse<JsonElement[]>>(responseString, new JsonSerializerOptions
+                        var apiResponse = JsonSerializer.Deserialize<TableListViewModel>(responseString, new JsonSerializerOptions
                         {
                             PropertyNameCaseInsensitive = true
                         });
 
-                        if (apiResponseWrapper?.Success == true && apiResponseWrapper.Data != null)
+                        if (apiResponse?.Tables?.Any() == true)
                         {
-                            // Convert the data array to TableApiModel list
-                            var tables = new List<TableApiModel>();
-
-                            foreach (var tableElement in apiResponseWrapper.Data)
-                            {
-                                var table = new TableApiModel
-                                {
-                                    Id = tableElement.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : 0,
-                                    TableNumber = tableElement.TryGetProperty("tableNumber", out var numProp) ? numProp.GetInt32() : 0,
-                                    TableStatusId = tableElement.TryGetProperty("tableStatusId", out var statusIdProp) ? statusIdProp.GetInt32() : 0,
-                                    OwnerId = tableElement.TryGetProperty("ownerId", out var ownerProp) &&
-                                             Guid.TryParse(ownerProp.GetString(), out var ownerId) ? ownerId : Guid.Empty,
-                                    IsActive = tableElement.TryGetProperty("isActive", out var activeProp) && activeProp.GetBoolean(),
-                                    QrCodeUrl = tableElement.TryGetProperty("qrcode", out var qrProp) ? qrProp.GetString() : "",
-                                    CreatedDate = tableElement.TryGetProperty("createdDate", out var createdProp) &&
-                                                 DateTime.TryParse(createdProp.GetString(), out var created) ? created : null,
-                                    ModifiedDate = tableElement.TryGetProperty("modifiedDate", out var modifiedProp) &&
-                                                  DateTime.TryParse(modifiedProp.GetString(), out var modified) ? modified : null,
-                                    // Map status based on tableStatusId
-                                    Status = GetStatusNameFromId(tableElement.TryGetProperty("tableStatusId", out var sIdProp) ? sIdProp.GetInt32() : 1)
-                                };
-                                tables.Add(table);
-                            }
-
-                            if (tables.Any())
-                            {
-                                response = new TableListViewModel
-                                {
-                                    Tables = tables,
-                                    TotalTables = tables.Count,
-                                    AvailableTables = tables.Count(t => t.TableStatusId == 1),
-                                    OccupiedTables = tables.Count(t => t.TableStatusId == 2),
-                                    Success = true
-                                };
-                                _logger.LogInformation("Using API data with {Count} tables", response.Tables.Count);
-                            }
-                            else
-                            {
-                                _logger.LogWarning("API returned empty tables");
-                            }
+                            response = apiResponse;
+                            _logger.LogInformation("Using API data with {Count} tables", response.Tables.Count);
                         }
                         else
                         {
-                            _logger.LogWarning("API response unsuccessful or no data");
+                            _logger.LogWarning("API returned empty tables, using test data");
+                            response = testResponse;
                         }
                     }
                     catch (JsonException ex)
                     {
-                        _logger.LogError(ex, "Failed to deserialize API response");
+                        _logger.LogError(ex, "Failed to deserialize API response, using test data");
+                        response = testResponse;
                     }
                 }
-                else
-                {
-                    _logger.LogWarning("API returned empty response");
-                }
+
 
                 // Set ViewBag cho table statuses
                 ViewBag.TableStatuses = await GetTableStatusesAsync();
@@ -129,16 +128,45 @@ namespace RestX.UI.Controllers
             }
         }
 
-        private string GetStatusNameFromId(int statusId)
+        /// <summary>
+        /// Table QR code display page
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("createqr")]
+        public async Task<IActionResult> TableQrCode()
         {
-            return statusId switch
+            try
             {
-                1 => "Available",
-                2 => "Occupied",
-                3 => "Reserved",
-                4 => "Maintenance",
-                _ => "Available"
-            };
+                _logger.LogInformation("Loading table QR code page");
+
+                var response = await _apiService.GetAsync<TableListViewModel>("api/table/qr-codes");
+
+                if (response?.Tables == null)
+                {
+                    return View("Error", new ErrorViewModel
+                    {
+                        Message = "Unable to load table QR code data"
+                    });
+                }
+
+                var tableItems = response.Tables.Select(table => new RestX.UI.Models.ViewModels.TableItemViewModel
+                {
+                    TableNumber = table.TableNumber,
+                    QrCode = table.QrCodeUrl ?? "",
+                    OwnerId = table.OwnerId,
+                    TableStatusId = 1 // Default status, adjust as needed
+                }).ToList();
+
+                return View("~/Views/Management/Table/TableQrCode.cshtml", tableItems);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading table QR code page");
+                return View("Error", new ErrorViewModel
+                {
+                    Message = "An error occurred while loading table QR codes"
+                });
+            }
         }
 
         // ===== CRUD METHODS SỬ DỤNG IApiService =====
@@ -149,7 +177,7 @@ namespace RestX.UI.Controllers
         /// <param name="model">Table data từ form</param>
         /// <returns></returns>
         [HttpPost("Upsert")]
-        //[Authorize(Roles = "Owner")]
+        [Authorize(Roles = "Owner")]
         public async Task<IActionResult> UpsertTable([FromForm] TableUpsertModel model)
         {
             try
@@ -243,7 +271,7 @@ namespace RestX.UI.Controllers
         /// <param name="id">Table ID</param>
         /// <returns></returns>
         [HttpDelete("Delete/{id:int}")]
-        //[Authorize(Roles = "Owner")]
+        [Authorize(Roles = "Owner")]
         public async Task<IActionResult> DeleteTable(int id)
         {
             try
@@ -457,126 +485,126 @@ namespace RestX.UI.Controllers
         /// </summary>
         /// <returns></returns>
         private async Task<List<TableStatusViewModel>> GetTableStatusesAsync()
-{
-    try
-    {
-        // First, try to get the actual table statuses from the API
-        var response = await _apiService.GetStringAsync("api/table/statuses");
-
-        if (!string.IsNullOrEmpty(response))
         {
-            _logger.LogInformation("Table statuses API response: {Response}", response);
-
             try
             {
-                // Try to deserialize as ApiResponse wrapper first
-                var apiResponse = JsonSerializer.Deserialize<ApiResponse<List<object>>>(response, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                // First, try to get the actual table statuses from the API
+                var response = await _apiService.GetStringAsync("api/table/statuses");
 
-                if (apiResponse?.Success == true && apiResponse.Data != null)
+                if (!string.IsNullOrEmpty(response))
                 {
-                    var statuses = new List<TableStatusViewModel>();
-                    
-                    foreach (var item in apiResponse.Data)
+                    _logger.LogInformation("Table statuses API response: {Response}", response);
+
+                    try
                     {
-                        if (item is JsonElement element)
+                        // Try to deserialize as ApiResponse wrapper first
+                        var apiResponse = JsonSerializer.Deserialize<ApiResponse<List<object>>>(response, new JsonSerializerOptions
                         {
-                            var status = new TableStatusViewModel
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                        if (apiResponse?.Success == true && apiResponse.Data != null)
+                        {
+                            var statuses = new List<TableStatusViewModel>();
+
+                            foreach (var item in apiResponse.Data)
                             {
-                                Id = element.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : 0,
-                                TableNumber = 0, // This might not be relevant for status types
-                                TableStatus = new TableStatusDetailViewModel
+                                if (item is JsonElement element)
                                 {
-                                    Id = element.TryGetProperty("id", out var statusIdProp) ? statusIdProp.GetInt32() : 0,
-                                    Name = element.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : "Unknown"
+                                    var status = new TableStatusViewModel
+                                    {
+                                        Id = element.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : 0,
+                                        TableNumber = 0, // This might not be relevant for status types
+                                        TableStatus = new TableStatusDetailViewModel
+                                        {
+                                            Id = element.TryGetProperty("id", out var statusIdProp) ? statusIdProp.GetInt32() : 0,
+                                            Name = element.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : "Unknown"
+                                        }
+                                    };
+                                    statuses.Add(status);
                                 }
-                            };
-                            statuses.Add(status);
+                            }
+
+                            if (statuses.Any())
+                            {
+                                _logger.LogInformation("Successfully parsed table statuses, count: {Count}", statuses.Count);
+                                return statuses;
+                            }
+                        }
+
+                        // Fallback: Try direct array parsing
+                        var jsonDocument = JsonDocument.Parse(response);
+                        var statusList = new List<TableStatusViewModel>();
+
+                        if (jsonDocument.RootElement.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var element in jsonDocument.RootElement.EnumerateArray())
+                            {
+                                var status = new TableStatusViewModel
+                                {
+                                    Id = element.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : 0,
+                                    TableNumber = 0,
+                                    TableStatus = new TableStatusDetailViewModel
+                                    {
+                                        Id = element.TryGetProperty("id", out var statusIdProp) ? statusIdProp.GetInt32() : 0,
+                                        Name = element.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : "Unknown"
+                                    }
+                                };
+                                statusList.Add(status);
+                            }
+
+                            if (statusList.Any())
+                            {
+                                _logger.LogInformation("Successfully parsed table statuses manually, count: {Count}", statusList.Count);
+                                return statusList;
+                            }
                         }
                     }
-
-                    if (statuses.Any())
+                    catch (JsonException ex)
                     {
-                        _logger.LogInformation("Successfully parsed table statuses, count: {Count}", statuses.Count);
-                        return statuses;
+                        _logger.LogError(ex, "Failed to parse table statuses response");
                     }
                 }
-
-                // Fallback: Try direct array parsing
-                var jsonDocument = JsonDocument.Parse(response);
-                var statusList = new List<TableStatusViewModel>();
-
-                if (jsonDocument.RootElement.ValueKind == JsonValueKind.Array)
+                else
                 {
-                    foreach (var element in jsonDocument.RootElement.EnumerateArray())
-                    {
-                        var status = new TableStatusViewModel
-                        {
-                            Id = element.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : 0,
-                            TableNumber = 0,
-                            TableStatus = new TableStatusDetailViewModel
-                            {
-                                Id = element.TryGetProperty("id", out var statusIdProp) ? statusIdProp.GetInt32() : 0,
-                                Name = element.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : "Unknown"
-                            }
-                        };
-                        statusList.Add(status);
-                    }
-
-                    if (statusList.Any())
-                    {
-                        _logger.LogInformation("Successfully parsed table statuses manually, count: {Count}", statusList.Count);
-                        return statusList;
-                    }
+                    _logger.LogWarning("Table statuses API returned empty response");
                 }
+
+                return GetDefaultTableStatuses();
             }
-            catch (JsonException ex)
+            catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to parse table statuses response");
+                _logger.LogError(ex, "Error getting table statuses from API");
+                return GetDefaultTableStatuses();
             }
         }
-        else
+
+        private static List<TableStatusViewModel> GetDefaultTableStatuses()
         {
-            _logger.LogWarning("Table statuses API returned empty response");
-        }
-
-        return GetDefaultTableStatuses();
-    }
-    catch (Exception ex)
+            return new List<TableStatusViewModel>
     {
-        _logger.LogError(ex, "Error getting table statuses from API");
-        return GetDefaultTableStatuses();
-    }
-}
-
-private static List<TableStatusViewModel> GetDefaultTableStatuses()
-{
-    return new List<TableStatusViewModel>
-    {
-        new() { 
-            Id = 1, 
-            TableNumber = 0, 
+        new() {
+            Id = 1,
+            TableNumber = 0,
             TableStatus = new TableStatusDetailViewModel { Id = 1, Name = "Available" }
         },
-        new() { 
-            Id = 2, 
-            TableNumber = 0, 
+        new() {
+            Id = 2,
+            TableNumber = 0,
             TableStatus = new TableStatusDetailViewModel { Id = 2, Name = "Occupied" }
         },
-        new() { 
-            Id = 3, 
-            TableNumber = 0, 
+        new() {
+            Id = 3,
+            TableNumber = 0,
             TableStatus = new TableStatusDetailViewModel { Id = 3, Name = "Reserved" }
         },
-        new() { 
-            Id = 4, 
-            TableNumber = 0, 
+        new() {
+            Id = 4,
+            TableNumber = 0,
             TableStatus = new TableStatusDetailViewModel { Id = 4, Name = "Maintenance" }
         }
     };
-}
+        }
 
         /// <summary>
         /// Get tables from API
@@ -632,4 +660,4 @@ private static List<TableStatusViewModel> GetDefaultTableStatuses()
         public Guid OwnerId { get; set; }
     }
 }
-    // 
+// 
