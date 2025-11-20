@@ -28,14 +28,14 @@ namespace RestX.UI.Controllers
             try
             {
                 _logger.LogInformation("Loading menu for owner: {OwnerId}, table: {TableId}", ownerId, tableId);
-                
+
                 var menu = await _menuService.GetMenuAsync(ownerId, tableId);
-                
+
                 if (menu == null || !string.IsNullOrEmpty(menu.ErrorMessage))
                 {
                     _logger.LogWarning("Failed to load menu for owner: {OwnerId}, table: {TableId}", ownerId, tableId);
-                    return View("Error", new ErrorViewModel 
-                    { 
+                    return View("Error", new ErrorViewModel
+                    {
                         Message = menu?.ErrorMessage ?? "Unable to load menu",
                         StatusCode = 404
                     });
@@ -50,8 +50,47 @@ namespace RestX.UI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading menu for owner: {OwnerId}, table: {TableId}", ownerId, tableId);
-                return View("Error", new ErrorViewModel 
-                { 
+                return View("Error", new ErrorViewModel
+                {
+                    Message = "An error occurred while loading the menu"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Display restaurant menu (POST) - preserve cart when returning from Cart page
+        /// </summary>
+        /// <param name="ownerId">Restaurant owner ID</param>
+        /// <param name="tableId">Table ID</param>
+        /// <param name="DishListJson">Current cart data</param>
+        /// <returns></returns>
+        [HttpPost]
+        [Route("Menu/Index/{ownerId:guid}/{tableId:int}")]
+        public async Task<IActionResult> Index(Guid ownerId, int tableId, string? DishListJson)
+        {
+            try
+            {
+                _logger.LogInformation("Loading menu for owner: {OwnerId}, table: {TableId} with cart preservation", ownerId, tableId);
+
+                // Save cart to TempData to preserve it when returning from Cart page
+                // Only preserve if cart is not empty
+                if (!string.IsNullOrEmpty(DishListJson) && DishListJson != "[]" && DishListJson != "{}")
+                {
+                    TempData["PreservedCart"] = DishListJson;
+                }
+                else
+                {
+                    // Clear preserved cart if empty
+                    TempData.Remove("PreservedCart");
+                }
+
+                return RedirectToAction("Index", new { ownerId, tableId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading menu for owner: {OwnerId}, table: {TableId}", ownerId, tableId);
+                return View("Error", new ErrorViewModel
+                {
                     Message = "An error occurred while loading the menu"
                 });
             }

@@ -67,6 +67,8 @@ namespace RestX.UI.Controllers
             if (tempModel != null)
             {
                 model = await _cartService.JsonToCartViewModel(tempModel.ToString());
+                // Clear tempModel after reading to prevent reuse
+                TempData.Remove("tempModel");
             }
 
             model = await _cartService.JsonToDishList(model);
@@ -253,36 +255,32 @@ namespace RestX.UI.Controllers
         }
 
         /// <summary>
-        /// Clear cart
+        /// Clear cart and redirect to Menu
         /// </summary>
+        /// <param name="ownerId">Restaurant owner ID</param>
+        /// <param name="tableId">Table ID</param>
         /// <returns></returns>
         [HttpPost]
-        public async Task<IActionResult> ClearCart()
+        public IActionResult ClearCartAndRedirect(Guid ownerId, int tableId)
         {
             try
             {
-                var ownerIdString = HttpContext.Session.GetString("OwnerId");
-                var tableIdString = HttpContext.Session.GetString("TableId");
+                _logger.LogInformation("Clearing cart - Owner: {OwnerId}, Table: {TableId}", ownerId, tableId);
 
-                if (!Guid.TryParse(ownerIdString, out var ownerId) || 
-                    !int.TryParse(tableIdString, out var tableId))
-                {
-                    return Json(new { success = false, message = "Invalid session data" });
-                }
+                // Clear all cart-related TempData
+                TempData.Remove("tempModel");
+                TempData.Remove("PreservedCart");
+                TempData.Remove("PendingCheckout");
 
-                var success = await _cartService.ClearCartAsync(ownerId, tableId);
-                
-                if (success)
-                {
-                    return Json(new { success = true, message = "Cart cleared successfully" });
-                }
-                
-                return Json(new { success = false, message = "Failed to clear cart" });
+                TempData["Message"] = "Đã xóa giỏ hàng thành công!";
+
+                return RedirectToAction("Index", "Menu", new { ownerId, tableId });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error clearing cart");
-                return Json(new { success = false, message = "An error occurred while clearing cart" });
+                _logger.LogError(ex, "Error clearing cart - Owner: {OwnerId}, Table: {TableId}", ownerId, tableId);
+                TempData["Message"] = "Đã xảy ra lỗi khi xóa giỏ hàng.";
+                return RedirectToAction("Index", new { ownerId, tableId });
             }
         }
 
@@ -299,6 +297,8 @@ namespace RestX.UI.Controllers
             var customerIdString = HttpContext.Session.GetString("CustomerId");
             if (string.IsNullOrEmpty(customerIdString))
             {
+                // Save cart to TempData before redirecting to login
+                TempData["PendingCheckout"] = System.Text.Json.JsonSerializer.Serialize(model);
                 TempData["Message"] = "Bạn hãy vui lòng đăng nhập!";
                 return RedirectToAction("Login", "AuthCustomer", new
                 {
@@ -325,11 +325,10 @@ namespace RestX.UI.Controllers
 
                 var success = await _cartService.CheckoutAsync(ownerId, tableId, model);
 
-                TempData["tempModel"] = JsonSerializer.Serialize(model);
-
-
                 if (success)
                 {
+                    // Clear tempModel after successful checkout
+                    TempData.Remove("tempModel");
                     TempData["Message"] = "Order placed successfully!";
                     return RedirectToAction("Index", "Home", new
                     {
@@ -338,8 +337,10 @@ namespace RestX.UI.Controllers
                     });
                 }
 
-                TempData["Message"] = "Failed to place order";
-                return RedirectToAction("Index", "Home", new
+                // Only save tempModel if checkout failed
+                model.Message = "Failed to place order. Please try again.";
+                TempData["tempModel"] = JsonSerializer.Serialize(model);
+                return RedirectToAction("Index", "Cart", new
                 {
                     OwnerId = model.OwnerId,
                     TableId = model.TableId

@@ -191,10 +191,10 @@ namespace RestX.API.Services.Implementations
                         dishCart.Add(new DishCartViewModel()
                         {
                             DishId = orderDetail.DishId,
-                            DishName = orderDetail.Dish.Name,
+                            DishName = orderDetail.Dish?.Name ?? "Unknown Dish",
                             Quantity = orderDetail.Quantity,
                             Price = orderDetail.Price,
-                            ImgUrl = orderDetail.Dish.File.Url,
+                            ImgUrl = orderDetail.Dish?.File?.Url ?? "",
                         });
                     }
 
