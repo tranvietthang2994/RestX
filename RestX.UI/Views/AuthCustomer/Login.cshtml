@@ -321,7 +321,7 @@
                 phoneStatus.className = 'phone-status loading';
 
                 // Make AJAX request to check phone
-                fetch(`https://localhost:7294/api/AuthCustomer/check-phone/${ownerId}?phone=${encodeURIComponent(phone)}`, {
+                fetch(`http://160.250.5.94:5000/api/AuthCustomer/check-phone/${ownerId}?phone=${encodeURIComponent(phone)}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',

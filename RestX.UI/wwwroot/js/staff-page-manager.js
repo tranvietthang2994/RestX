@@ -75,7 +75,7 @@ window.StaffPageManager = (function () {
         ) {
             console.log("Creating new SignalR connection for StatusTable...");
             tableStatusSignalRConnection = new signalR.HubConnectionBuilder()
-                .withUrl("https://160.250.5.94:5000/tableStatusHub", {
+                .withUrl("http://160.250.5.94:5000/tableStatusHub", {
                     skipNegotiation: false,
                     withCredentials: true
                 })
@@ -301,7 +301,7 @@ window.StaffPageManager = (function () {
                     });
 
                     // GỌI API — sửa cho đúng ngữ cảnh backend của bạn
-                    const apiUrl = "https://160.250.5.94:5000/api/Staff/dish-availability";
+                    const apiUrl = "http://160.250.5.94:5000/api/Staff/dish-availability";
 
                     const response = await fetch(apiUrl, {
                         method: "PUT",
@@ -477,7 +477,7 @@ window.StaffPageManager = (function () {
         if (!orderSignalRConnection || orderSignalRConnection.state !== signalR.HubConnectionState.Connected) {
             console.log("Creating new SignalR connection for Orders...");
             orderSignalRConnection = new signalR.HubConnectionBuilder()
-                .withUrl("https://160.250.5.94:5000/signalrServer", {
+                .withUrl("http://160.250.5.94:5000/signalrServer", {
                     skipNegotiation: false,
                     withCredentials: true
                 })
@@ -770,7 +770,7 @@ window.StaffPageManager = (function () {
             saveButton.textContent = "Saving...";
 
             try {
-                const apiBaseUrl = "https://160.250.5.94:5000/api/Staff/order-detail-status";
+                const apiBaseUrl = "http://160.250.5.94:5000/api/Staff/order-detail-status";
 
                 const promises = currentOrderData.orderDetails.map(async (detail) => {
                     const requestData = {
@@ -856,7 +856,7 @@ window.StaffPageManager = (function () {
                 }
 
                 try {
-                    const apiBaseUrl = "https://160.250.5.94:5000/api/Staff/order-status";
+                    const apiBaseUrl = "http://160.250.5.94:5000/api/Staff/order-status";
                     const newStatusId = currentStatusId + 1; // Move to next status
 
                     const response = await fetch(apiBaseUrl, {
@@ -914,7 +914,7 @@ window.StaffPageManager = (function () {
                 console.log("Calling payment API...");
 
                 // Call API to create payment link
-                const response = await fetch("https://160.250.5.94:5000/api/Payment/create", {
+                const response = await fetch("http://160.250.5.94:5000/api/Payment/create", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
@@ -957,7 +957,7 @@ window.StaffPageManager = (function () {
             // Check payment status every 3 seconds
             paymentCheckInterval = setInterval(async () => {
                 try {
-                    const response = await fetch(`https://160.250.5.94:5000/api/Payment/${orderCode}`);
+                    const response = await fetch(`http://160.250.5.94:5000/api/Payment/${orderCode}`);
                     const result = await response.json();
 
                     console.log("Payment status check:", result);
