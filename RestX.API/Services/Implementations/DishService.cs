@@ -12,12 +12,14 @@ namespace RestX.API.Services.Implementations
     {
         private readonly IOwnerService ownerService;
         private readonly IFileService fileService;
+        private readonly ICloudinaryService cloudinaryService;
         private readonly IMapper mapper;
 
-        public DishService(IRepository repo, IHttpContextAccessor httpContextAccessor, IOwnerService ownerService, IFileService fileService, IMapper mapper) : base(repo, httpContextAccessor)
+        public DishService(IRepository repo, IHttpContextAccessor httpContextAccessor, IOwnerService ownerService, IFileService fileService, ICloudinaryService cloudinaryService, IMapper mapper) : base(repo, httpContextAccessor)
         {
             this.ownerService = ownerService;
             this.fileService = fileService;
+            this.cloudinaryService = cloudinaryService;
             this.mapper = mapper;
         }
 
@@ -69,8 +71,9 @@ namespace RestX.API.Services.Implementations
             if (request.ImageFile != null && request.ImageFile.Length > 0)
             {
                 var owner = await ownerService.GetOwnerByIdAsync(ownerId);
-                var imageUrl = await fileService.UploadDishImageAsync(request.ImageFile, owner.Name, request.Name);
-                var file = await fileService.CreateFileFromUploadAsync(imageUrl, request.ImageFile.FileName, ownerId);
+                //var imageUrl = await fileService.UploadDishImageAsync(request.ImageFile, owner.Name, request.Name);
+                var imageUrl = await cloudinaryService.UploadImageAsync(request.ImageFile, owner.Name);
+                var file = await fileService.CreateFileFromUploadAsync(imageUrl.Url, request.ImageFile.FileName, ownerId);
                 dish.FileId = file.Id;
             }
 
