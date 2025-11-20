@@ -65,9 +65,21 @@
             <div class="header-title">@Model.Name</div>
             <div class="header-address">@Model.Address</div>
         </div>
-        <div class="header-flag">
-            <span style="font-size:1.2rem;">🇬🇧</span>
-        </div>
+        @if (isLoggedIn)
+        {
+            <a href="@Url.Action("Logout", "AuthCustomer", new { ownerId = ownerId, tableId = tableId })"
+               style="position: absolute; right: 16px; font-size: 0.85rem; color: #ff9800; text-decoration: none; cursor: pointer; padding: 4px 8px; border: 1px solid #ff9800; border-radius: 4px; transition: all 0.2s;"
+               onmouseover="this.style.backgroundColor='#ff9800'; this.style.color='white';"
+               onmouseout="this.style.backgroundColor='transparent'; this.style.color='#ff9800';">
+                Logout
+            </a>
+        }
+        else
+        {
+            <div class="header-flag" style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size:1.2rem;">🇬🇧</span>
+            </div>
+        }
     </div>
 
     <!-- Banner -->
@@ -148,13 +160,17 @@
     </a>
 
     <!-- Floating button -->
-    <a href="/Order/History/@(ownerId)/@(tableId)" class="floating-btn">
-        <p style="display: none;">@message</p>
-        <span>🔔</span>
-    </a>
+    @if (ownerId.HasValue && tableId.HasValue)
+    {
+        <a href="/Order/History/@(ownerId)/@(tableId)" class="floating-btn">
+            <p style="display: none;">@message</p>
+            <span>🔔</span>
+        </a>
+    }
 
-    <div class="powered-by">
-        Powered by RestX
+    <div class="powered-by" style="display: flex; justify-content: center; align-items: center; position: relative; padding: 0 16px;">
+        <span>Powered by RestX</span>
+        
     </div>
 </div>
 

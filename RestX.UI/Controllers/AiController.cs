@@ -414,7 +414,8 @@ namespace RestX.UI.Controllers
                             CategoryName = category.CategoryName,
                             Price = dish.Price,
                             Description = dish.Description,
-                            IsActive = dish.IsActive ?? true
+                            IsActive = dish.IsActive ?? true,
+                            ImageUrl = dish.ImageUrl
                         }))
                         .Where(dish => dish.IsActive)
                         .ToList();
@@ -487,6 +488,7 @@ namespace RestX.UI.Controllers
         public decimal Price { get; set; }
         public string? Description { get; set; }
         public bool IsActive { get; set; }
+        public string? ImageUrl { get; set; }
     }
 
     public class MenuApiResponse

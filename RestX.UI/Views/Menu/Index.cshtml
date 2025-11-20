@@ -327,7 +327,43 @@
     let cart = [];
     let jsonData = document.getElementById("jsonData");
 
+    // Load preserved cart from TempData if exists
+    @if (TempData["PreservedCart"] != null)
+    {
+        <text>
+        try {
+            cart = JSON.parse('@Html.Raw(TempData["PreservedCart"])');
+            jsonData.value = '@Html.Raw(TempData["PreservedCart"])';
+            console.log("Loaded preserved cart:", cart);
+
+            // Calculate total cart value
+            cart.forEach(dishCart => {
+                CartValue += dishCart.Price * dishCart.Quantity;
+                numChosenDish++;
+            });
+
+            // Show cart preview if has items
+            if (cart.length > 0) {
+                ViewChoseOrder.style.display = "flex";
+                updateCartValue();
+            }
+        } catch (e) {
+            console.error("Error loading preserved cart:", e);
+            cart = [];
+        }
+        </text>
+    }
+
     loadAddDish();
+
+    // Restore UI state after cart is loaded
+    @if (TempData["PreservedCart"] != null)
+    {
+        <text>
+        updateDishOnScreen();
+        updateOrderPreview();
+        </text>
+    }
 
     function loadAddDish() {
 
@@ -557,5 +593,36 @@
 
             chooseNum.children[1].textContent = dishCart.Quantity.toString();
         });
+    }
+
+    function updateOrderPreview() {
+        const currentDishes = document.getElementsByClassName("menu-dish-card");
+
+        // Clear existing preview images
+        OrderList.innerHTML = '<h5 class="m-0" hidden>+0</h5>';
+
+        // Add images for items in cart
+        let displayCount = 0;
+        cart.forEach((dishCart, index) => {
+            var currDish = [...currentDishes].find(dish =>
+                dish.getAttribute("dish-id") == dishCart.DishId
+            );
+
+            if (currDish && displayCount < 5) {
+                const imgSrc = currDish.firstElementChild.src;
+                const imgAlt = currDish.firstElementChild.alt;
+                updateOrderWindow(imgSrc, imgAlt);
+                displayCount++;
+            }
+        });
+
+        // Show +N indicator if more than 4 items
+        if (cart.length > 4) {
+            const lastChild = OrderList.lastElementChild;
+            if (lastChild && lastChild.tagName === 'H5') {
+                lastChild.textContent = `+${cart.length - 4}`;
+                lastChild.removeAttribute('hidden');
+            }
+        }
     }
 </script>
