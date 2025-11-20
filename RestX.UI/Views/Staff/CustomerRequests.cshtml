@@ -37,7 +37,13 @@
                             </span>
                         </div>
                         <div class="order-status">
-                            <span class="status-badge status-@order.OrderStatus.ToLower().Replace(" ", "-")">@order.OrderStatus</span>
+                            <div class="status-badges">
+                                <span class="status-badge status-@order.OrderStatus.ToLower().Replace(" ", "-")">@order.OrderStatus</span>
+                                @if (!order.IsPaid)
+                                {
+                                    <span class="payment-badge payment-unpaid">UNPAID</span>
+                                }
+                            </div>
                             <span class="total-amount">@order.TotalAmount.ToString("C")</span>
                         </div>
                     </div>
@@ -61,6 +67,31 @@
                         {
                             <button class="btn-action btn-edit" onclick="editOrderDetails('@order.Id')">
                                 <i class="ti ti-edit"></i> Edit Items
+                            </button>
+                        }
+                        @* Change Status button OR Checkout button *@
+                        @if (order.OrderStatusId == 4 && !order.IsPaid)
+                        {
+                            @* Show Checkout button for Completed but Unpaid orders *@
+                            <button class="btn-action btn-checkout"
+                                    onclick="showCheckoutModal('@order.Id', @((int)order.TotalAmount))"
+                                    data-order-id="@order.Id"
+                                    data-order-status="@order.OrderStatusId"
+                                    data-is-paid="@order.IsPaid">
+                                <i class="ti ti-cash"></i> Checkout
+                            </button>
+                        }
+                        else if (order.OrderStatusId < 4)
+                        {
+                            var buttonText = order.OrderStatusId switch
+                            {
+                                1 => "Start Preparing",      // Pending -> Preparing
+                                2 => "Mark as Ready",        // Preparing -> Ready
+                                3 => "Complete Order",       // Ready -> Completed
+                                _ => "Update Status"
+                            };
+                            <button class="btn-action btn-confirm" onclick="confirmOrder('@order.Id', @order.OrderStatusId)" data-order-id="@order.Id" data-current-status="@order.OrderStatusId">
+                                <i class="ti ti-arrow-right"></i> @buttonText
                             </button>
                         }
                     </div>
@@ -95,6 +126,7 @@
             </div>
         </div>
     </div>
+
 
     <style>
         .request-card {
@@ -157,12 +189,32 @@
             gap: 5px;
         }
 
+        .status-badges {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: flex-end;
+        }
+
         .status-badge {
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.8em;
             font-weight: 500;
             text-transform: uppercase;
+        }
+
+        .payment-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .payment-unpaid {
+            background: #ffe0e0;
+            color: #d32f2f;
         }
 
         .status-pending {
@@ -238,6 +290,25 @@
 
             .btn-edit:hover {
                 background: #e67e22;
+            }
+
+        .btn-confirm {
+            background: #27ae60;
+            color: white;
+        }
+
+            .btn-confirm:hover {
+                background: #229954;
+            }
+
+        .btn-checkout {
+            background: #9b59b6;
+            color: white;
+            font-weight: bold;
+        }
+
+            .btn-checkout:hover {
+                background: #8e44ad;
             }
 
         .no-orders {
@@ -384,6 +455,7 @@
                 transform: translateX(26px);
             }
 
+
         .btn {
             padding: 8px 16px;
             border: none;
@@ -411,22 +483,170 @@
             }
 
         @@media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 1.5em;
+                margin-bottom: 15px;
+            }
+
+            .request-card {
+                padding: 15px;
+                margin-bottom: 12px;
+            }
+
             .request-header {
                 flex-direction: column;
-                gap: 10px;
+                gap: 8px;
+            }
+
+            .request-info {
+                width: 100%;
+            }
+
+            .table-number {
+                font-size: 1em;
+            }
+
+            .customer-name {
+                font-size: 0.9em;
+            }
+
+            .customer-phone {
+                font-size: 0.85em;
             }
 
             .order-status {
+                align-items: flex-start;
                 text-align: left;
             }
 
+            .status-badges {
+                align-items: flex-start;
+            }
+
+            .status-badge {
+                font-size: 0.75em;
+                padding: 3px 10px;
+            }
+
+            .payment-badge {
+                font-size: 0.7em;
+                padding: 3px 10px;
+            }
+
+            .total-amount {
+                font-size: 1em;
+                margin-top: 5px;
+            }
+
+            .request-content {
+                margin-bottom: 12px;
+            }
+
+            .order-summary {
+                font-size: 0.9em;
+            }
+
             .request-actions {
-                justify-content: flex-start;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .btn-action {
+                width: 100%;
+                justify-content: center;
+                padding: 10px 16px;
+                font-size: 0.95em;
             }
 
             .modal-content {
                 width: 95%;
                 margin: 2% auto;
+                max-height: 90vh;
+            }
+
+            .modal-header {
+                padding: 15px;
+            }
+
+            .modal-header h2 {
+                font-size: 1.3em;
+            }
+
+            .modal-body {
+                padding: 15px;
+            }
+
+            .modal-footer {
+                padding: 15px;
+                flex-direction: column;
+            }
+
+            .modal-footer .btn {
+                width: 100%;
+            }
+
+            .order-detail-item {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 12px;
+            }
+
+            .order-detail-actions {
+                width: 100%;
+                justify-content: space-between;
+                margin-top: 10px;
+            }
+
+            .dish-name {
+                font-size: 0.95em;
+            }
+
+            .dish-details {
+                font-size: 0.85em;
+            }
+
+            .no-orders {
+                padding: 40px 15px;
+            }
+
+            .no-orders i {
+                font-size: 2.5em;
+            }
+
+            .no-orders h3 {
+                font-size: 1.2em;
+            }
+        }
+
+        /* Extra small devices (phones in portrait, less than 576px) */
+        @@media (max-width: 576px) {
+            .page-header {
+                padding: 10px;
+            }
+
+            .page-header h1 {
+                font-size: 1.3em;
+            }
+
+            .request-card {
+                padding: 12px;
+            }
+
+            .table-number {
+                font-size: 0.95em;
+            }
+
+            .total-amount {
+                font-size: 0.95em;
+            }
+
+            .btn-action {
+                padding: 8px 12px;
+                font-size: 0.9em;
+            }
+
+            .btn-action i {
+                font-size: 1em;
             }
         }
     </style>

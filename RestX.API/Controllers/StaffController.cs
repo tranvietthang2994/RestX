@@ -21,6 +21,7 @@ namespace RestX.API.Controllers
         private readonly IOrderDetailService orderDetailService;
         private readonly IStaffManagementService staffManagementService;
         private readonly IHubContext<SignalrServer> hubContext;
+        private readonly IHubContext<TableStatusHub> tableStatusHubContext;
         private readonly IExceptionHandler exceptionHandler;
 
         public StaffController(
@@ -32,6 +33,7 @@ namespace RestX.API.Controllers
             IOrderDetailService orderDetailService,
             IStaffManagementService staffManagementService,
             IHubContext<SignalrServer> hubContext,
+            IHubContext<TableStatusHub> tableStatusHubContext,
             IExceptionHandler exceptionHandler)
         {
             this.menuService = menuService;
@@ -42,6 +44,7 @@ namespace RestX.API.Controllers
             this.orderDetailService = orderDetailService;
             this.staffManagementService = staffManagementService;
             this.hubContext = hubContext;
+            this.tableStatusHubContext = tableStatusHubContext;
             this.exceptionHandler = exceptionHandler;
         }
 
@@ -231,6 +234,60 @@ namespace RestX.API.Controllers
             catch (Exception ex)
             {
                 this.exceptionHandler.RaiseException(ex, $"An error occurred while updating order detail status for OrderDetailId: {request.OrderDetailId}");
+                return StatusCode(500, new { success = false, message = "Internal server error" });
+            }
+        }
+
+        /// <summary>
+        /// Confirm/update order status (e.g., Pending -> Preparing -> Ready -> Completed)
+        /// </summary>
+        /// <param name="request">Request containing orderId and newStatusId</param>
+        /// <returns>Update result</returns>
+        [HttpPut("order-status")]
+        public async Task<IActionResult> UpdateOrderStatus([FromBody] UpdateOrderStatusByIdRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(new { success = false, message = "Invalid data", errors = ModelState });
+
+                var success = await orderService.UpdateOrderStatusAsync(request.OrderId, request.NewStatusId);
+
+                // Broadcast updates via SignalR
+                if (success)
+                {
+                    try
+                    {
+                        // Broadcast updated order list
+                        var customerRequest = await orderService.GetCustomerRequestsByStaffAsync();
+                        await hubContext.Clients.All.SendAsync("ReceiveOrderList", customerRequest.Orders);
+
+                        // If order was confirmed (status changed to Preparing), also broadcast table status update
+                        // The table status is already updated in OrderService.UpdateOrderStatusAsync
+                        // We just need to broadcast it to all clients
+                        var tableStatusList = await tableService.GetAllTablesByCurrentStaff();
+                        await tableStatusHubContext.Clients.All.SendAsync("ReceiveTableStatusList", tableStatusList);
+                    }
+                    catch (Exception signalREx)
+                    {
+                        // Log SignalR error but don't fail the update
+                        this.exceptionHandler.RaiseException(signalREx, "SignalR broadcast failed after order status update");
+                    }
+                }
+
+                return Ok(new
+                {
+                    success = success,
+                    message = success ? "Order status updated successfully." : "Failed to update order status."
+                });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { success = false, message = "Staff not authenticated" });
+            }
+            catch (Exception ex)
+            {
+                this.exceptionHandler.RaiseException(ex, $"An error occurred while updating order status for OrderId: {request.OrderId}");
                 return StatusCode(500, new { success = false, message = "Internal server error" });
             }
         }
