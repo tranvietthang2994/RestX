@@ -4,7 +4,6 @@
     {
         public int Id { get; set; }
         public int TableNumber { get; set; }
-
         public TableStatusDetailViewModel? TableStatus { get; set; }
     }
 
@@ -13,21 +12,14 @@
         public int Id { get; set; }
         public string? Name { get; set; }
         public IEnumerable<TableItemViewModel>? Tables { get; set; }
-
-        public static implicit operator TableStatusDetailViewModel(string v)
-        {
-            throw new NotImplementedException();
-        }
     }
 
     public class TableItemViewModel
     {
-        public Guid OwnerId { get; set; }
         public int Id { get; set; }
         public int TableNumber { get; set; }
         public bool IsActive { get; set; }
         public string? QrCode { get; set; }
         public int TableStatusId { get; set; }
-        
     }
 }

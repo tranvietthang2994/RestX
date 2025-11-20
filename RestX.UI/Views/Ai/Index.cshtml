@@ -234,12 +234,26 @@
         flex-wrap: wrap;
         gap: 2.5vw;
         align-items: center;
+        padding: 3vw;
+        background: #f8f9fa;
+        border-radius: 3vw;
+        border: 1px solid #e9ecef;
+    }
+
+    .ai-suggestion-dish-name {
+        font-weight: 600;
+        color: #333;
+        font-size: clamp(0.9rem, 3.8vw, 1.05rem);
+        flex: 0 0 auto;
+        min-width: 120px;
     }
 
     .ai-suggestion-price {
         font-weight: 600;
         color: #28a745;
         font-size: clamp(0.85rem, 3.5vw, 1rem);
+        flex: 0 0 auto;
+        margin-left: auto;
     }
 
     .ai-suggestion-actions-list {
@@ -256,6 +270,23 @@
         margin-bottom: 1vw;
     }
 
+    .ai-dish-card-inline {
+        margin: 3vw 0;
+        display: block;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    @@keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
     .add-to-cart-btn {
         background: #28a745;
         color: white;
@@ -269,6 +300,8 @@
         display: inline-flex;
         align-items: center;
         gap: 1vw;
+        white-space: nowrap;
+        flex: 0 0 auto;
     }
 
     .add-to-cart-btn:hover:not(:disabled) {
@@ -428,9 +461,72 @@
         background: #e9ecef;
         color: #333;
     }
+
+    /* Cart Preview Styles */
+    .ViewChoseOrder {
+        --bs-gutter-x: 0;
+    }
+
+    .OrderList {
+        --bs-gutter-x: 0;
+    }
+
+    .OrderList img {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        object-fit: cover;
+        border: 1px solid #f1f1f1;
+    }
+
+    .ShortConfirm {
+        --bs-gutter-x: 0;
+    }
+
+    /* Responsive cho mobile */
+    @@media (max-width: 600px) {
+        .ai-suggestion-actions {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2vw;
+        }
+
+        .ai-suggestion-dish-name {
+            width: 100%;
+            margin-bottom: 1vw;
+        }
+
+        .ai-suggestion-price {
+            margin-left: 0;
+            width: 100%;
+        }
+
+        .add-to-cart-btn {
+            width: 100%;
+            justify-content: center;
+            margin-top: 2vw;
+        }
+    }
 </style>
 
 <button type="button" class="back-btn" id="aiBackButton">← Quay lại</button>
+
+<!-- Cart Preview (like Menu page) -->
+<div class="ViewChoseOrder row py-3 position-fixed bottom-0 start-50 translate-middle-x w-100 bg-white px-3" style="display: none; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.1);">
+    <div class="OrderList col-6 row flex-nowrap justify-content-start align-items-center">
+        <h5 class="m-0" hidden>+0</h5>
+    </div>
+    <form action="/Cart/Index/@ownerId/@tableId" method="get" class="col-6">
+        <input type="hidden" name="OwnerId" value="@ownerId" />
+        <input type="hidden" name="TableId" value="@tableId" />
+        <input type="hidden" name="DishListJson" id="aiCartJsonData" />
+        <button type="submit" class="ShortConfirm row align-items-center px-2 py-1" style="background-color: #28a745; color: #fff; border-radius: 5px; border: none; width: 100%;">
+            <p class="col-5 m-0" id="aiCartValue">0đ</p>
+            <h5 class="col-7 m-0 text-center">Xem,<br />xác nhận</h5>
+        </button>
+    </form>
+</div>
+
 <div class="ai-chat-container">
     <!-- Header -->
     <div class="chat-header">
@@ -504,6 +600,8 @@ class AiChat {
     constructor() {
         this.currentMode = 'suggestion';
         this.conversationHistory = '';
+        this.cart = [];
+        this.cartValue = 0;
         this.availableDishes = (aiAvailableDishes || []).map(dish => {
             const numericPrice = Number(dish.price);
             return {
@@ -525,6 +623,10 @@ class AiChat {
         this.typingIndicator = document.getElementById('typingIndicator');
         this.modeButtons = document.querySelectorAll('.mode-btn');
         this.suggestionButtons = document.querySelectorAll('.suggestion-btn');
+        this.viewChoseOrder = document.querySelector('.ViewChoseOrder');
+        this.orderList = document.querySelector('.OrderList');
+        this.cartValueElement = document.getElementById('aiCartValue');
+        this.cartJsonData = document.getElementById('aiCartJsonData');
     }
 
     attachEventListeners() {
@@ -662,10 +764,6 @@ class AiChat {
         messageContent.className = 'message-content';
         messageContent.innerHTML = this.formatMessage(content, sender, options);
 
-        if (sender === 'ai' && options.isSuggestion) {
-            this.appendSuggestedDishButtons(messageContent, content);
-        }
-
         messageDiv.appendChild(avatar);
         messageDiv.appendChild(messageContent);
 
@@ -677,29 +775,106 @@ class AiChat {
         const rawText = content ?? '';
 
         if (sender === 'ai' && options.isSuggestion) {
-            return this.formatSuggestion(rawText);
+            return this.formatSuggestionWithInlineCards(rawText);
         }
 
         return this.escapeHtml(rawText).replace(/\n/g, '<br>');
     }
 
-    formatSuggestion(rawContent) {
+    formatSuggestionWithInlineCards(rawContent) {
         if (!rawContent) {
             return '';
         }
 
-        const paragraphs = rawContent
-            .split(/\n\s*\n/)
-            .map(paragraph => paragraph.trim())
-            .filter(paragraph => paragraph.length > 0);
+        // Tìm tất cả món ăn được nhắc đến trong text
+        const matchedDishes = this.extractSuggestedDishes(rawContent);
 
-        if (paragraphs.length === 0) {
+        if (matchedDishes.length === 0) {
+            // Không có món nào, hiển thị text bình thường
             return this.escapeHtml(rawContent).replace(/\n/g, '<br>');
         }
 
-        return paragraphs
-            .map(paragraph => `<p>${this.escapeHtml(paragraph).replace(/\n/g, '<br>')}</p>`)
-            .join('');
+        // Tạo một mảng các vị trí xuất hiện món ăn
+        const dishPositions = [];
+
+        matchedDishes.forEach((dish) => {
+            // Tìm tất cả vị trí xuất hiện của món này (case-insensitive)
+            const searchName = dish.name.toLowerCase();
+            const contentLower = rawContent.toLowerCase();
+
+            let startIndex = 0;
+            let foundIndex = contentLower.indexOf(searchName, startIndex);
+
+            // Chỉ lấy lần xuất hiện đầu tiên
+            if (foundIndex !== -1) {
+                // Kiểm tra xem vị trí này đã có món khác chưa
+                const exists = dishPositions.some(p =>
+                    (foundIndex >= p.start && foundIndex < p.end) ||
+                    (foundIndex + dish.name.length > p.start && foundIndex + dish.name.length <= p.end)
+                );
+
+                if (!exists) {
+                    dishPositions.push({
+                        start: foundIndex,
+                        end: foundIndex + dish.name.length,
+                        dish: dish,
+                        actualText: rawContent.substring(foundIndex, foundIndex + dish.name.length)
+                    });
+                }
+            }
+        });
+
+        // Sắp xếp theo vị trí xuất hiện
+        dishPositions.sort((a, b) => a.start - b.start);
+
+        // Build HTML từ các vị trí
+        let result = [];
+        let currentPos = 0;
+
+        dishPositions.forEach((position) => {
+            // Thêm text trước món ăn
+            if (position.start > currentPos) {
+                const beforeText = rawContent.substring(currentPos, position.start);
+                result.push(this.escapeHtml(beforeText).replace(/\n/g, '<br>'));
+            }
+
+            // Thêm tên món
+            result.push(this.escapeHtml(position.actualText));
+
+            // Thêm card món ăn
+            result.push(this.createDishCardHtml(position.dish));
+
+            currentPos = position.end;
+        });
+
+        // Thêm phần text còn lại
+        if (currentPos < rawContent.length) {
+            const remainingText = rawContent.substring(currentPos);
+            result.push(this.escapeHtml(remainingText).replace(/\n/g, '<br>'));
+        }
+
+        return result.join('');
+    }
+
+    escapeRegex(str) {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    createDishCardHtml(dish) {
+        const priceLabel = dish.numericPrice !== null
+            ? this.formatPrice(dish.numericPrice)
+            : (dish.price ? this.escapeHtml(String(dish.price)) : '');
+
+        return `
+            <div class="ai-dish-card-inline" style="margin: 2vw 0;">
+                <div class="ai-suggestion-actions" style="margin-top: 2vw;">
+                    <span class="ai-suggestion-dish-name">${this.escapeHtml(dish.name)}</span>
+                    ${priceLabel ? `<span class="ai-suggestion-price">${priceLabel}</span>` : ''}
+                    <button type="button" class="add-to-cart-btn" data-dish-id="${dish.id}" data-dish-name="${this.escapeAttribute(dish.name)}">
+                        🛒 Thêm vào giỏ hàng
+                    </button>
+                </div>
+            </div>`;
     }
 
     formatPrice(price) {
@@ -753,48 +928,6 @@ class AiChat {
         return matched;
     }
 
-    appendSuggestedDishButtons(container, rawContent) {
-        const matchedDishes = this.extractSuggestedDishes(rawContent);
-        if (!matchedDishes.length) {
-            return;
-        }
-
-        const actionsList = document.createElement('div');
-        actionsList.className = 'ai-suggestion-actions-list';
-
-        const title = document.createElement('div');
-        title.className = 'ai-suggestion-actions-title';
-        title.textContent = 'Thêm nhanh các món gợi ý:';
-        actionsList.appendChild(title);
-
-        matchedDishes.forEach(dish => {
-            const row = document.createElement('div');
-            row.className = 'ai-suggestion-actions';
-
-            const priceLabel = dish.numericPrice !== null
-                ? this.formatPrice(dish.numericPrice)
-                : (dish.price ? this.escapeHtml(String(dish.price)) : null);
-
-            if (priceLabel) {
-                const priceSpan = document.createElement('span');
-                priceSpan.className = 'ai-suggestion-price';
-                priceSpan.textContent = `Giá: ${priceLabel}`;
-                row.appendChild(priceSpan);
-            }
-
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'add-to-cart-btn';
-            button.dataset.dishId = dish.id;
-            button.dataset.dishName = dish.name;
-            button.textContent = '🛒 Thêm vào giỏ hàng';
-
-            row.appendChild(button);
-            actionsList.appendChild(row);
-        });
-
-        container.appendChild(actionsList);
-    }
 
     async handleAddToCartClick(event) {
         const button = event.target.closest('.add-to-cart-btn');
@@ -809,59 +942,90 @@ class AiChat {
             return;
         }
 
-        await this.addDishToCart(dishId, dishName, button);
+        this.addDishToLocalCart(dishId, dishName, button);
     }
 
-    async addDishToCart(dishId, dishName, button) {
-        const originalText = button.dataset.originalText || button.textContent;
-        button.dataset.originalText = originalText;
-        button.disabled = true;
-        button.textContent = 'Đang thêm...';
+    addDishToLocalCart(dishId, dishName, button) {
+        // Find dish in available dishes
+        const dish = this.availableDishes.find(d => d.id == dishId);
+        if (!dish) {
+            console.error('Dish not found:', dishId);
+            return;
+        }
 
-        try {
-            const response = await fetch('/Cart/AddToCart', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-                },
-                body: new URLSearchParams({
-                    dishId: dishId,
-                    quantity: 1
-                })
+        // Check if dish already in cart
+        const existingItem = this.cart.find(item => item.DishId == dishId);
+
+        if (existingItem) {
+            // Increase quantity
+            existingItem.Quantity++;
+            button.textContent = `🛒 Đã thêm (${existingItem.Quantity})`;
+        } else {
+            // Add new item
+            this.cart.push({
+                DishId: Number(dishId),
+                DishName: dish.name,
+                Quantity: 1,
+                Price: dish.numericPrice || dish.price || 0,
+                ImgUrl: dish.imageUrl || ''
             });
+            button.textContent = '🛒 Đã thêm (1)';
+        }
 
-            const data = await response.json();
+        // Update cart value
+        this.cartValue += (dish.numericPrice || dish.price || 0);
+        this.updateCartDisplay();
 
-            if (data.success) {
-                button.textContent = 'Đã thêm vào giỏ ✓';
-                button.classList.add('added');
+        // Visual feedback
+        button.classList.add('added');
+        setTimeout(() => {
+            button.classList.remove('added');
+        }, 1000);
+    }
 
-                setTimeout(() => {
-                    button.classList.remove('added');
-                    button.disabled = false;
-                    button.textContent = originalText;
-                }, 2500);
+    updateCartDisplay() {
+        // Update cart JSON
+        this.cartJsonData.value = JSON.stringify(this.cart);
 
-                return;
+        // Update total value
+        this.cartValueElement.textContent = this.formatPrice(this.cartValue);
+
+        // Show cart preview
+        if (this.cart.length > 0) {
+            this.viewChoseOrder.style.display = 'flex';
+        }
+
+        // Update preview images (show max 4 images)
+        this.updateOrderPreview();
+    }
+
+    updateOrderPreview() {
+        // Clear existing images (keep the +N counter element)
+        const children = Array.from(this.orderList.children);
+        children.forEach(child => {
+            if (child.tagName === 'IMG') {
+                child.remove();
             }
+        });
 
-            if (data.requiresLogin) {
-                button.disabled = false;
-                button.textContent = originalText;
-                const message = data.message || 'Bạn cần đăng nhập để thêm món vào giỏ hàng.';
-                const shouldRedirect = window.confirm(`${message}\nBạn có muốn đăng nhập ngay không?`);
-                if (shouldRedirect && data.loginUrl) {
-                    window.location.href = data.loginUrl;
-                }
-                return;
-            }
+        // Add images for items in cart (max 4)
+        const displayCount = Math.min(this.cart.length, 4);
+        for (let i = 0; i < displayCount; i++) {
+            const item = this.cart[i];
+            const img = document.createElement('img');
+            img.className = 'pe-1';
+            img.src = item.ImgUrl || '';
+            img.alt = item.DishName;
+            this.orderList.appendChild(img);
+        }
 
-            throw new Error(data.message || 'Không thể thêm món vào giỏ.');
-        } catch (error) {
-            console.error('Add to cart error:', error);
-            button.disabled = false;
-            button.textContent = originalText;
-            window.alert(error.message || 'Không thể thêm món vào giỏ. Vui lòng thử lại.');
+        // Show +N indicator if more than 4 items
+        const counter = this.orderList.querySelector('h5');
+        if (this.cart.length > 4) {
+            counter.textContent = `+${this.cart.length - 4}`;
+            counter.removeAttribute('hidden');
+        } else {
+            counter.setAttribute('hidden', '');
         }
     }
 
@@ -889,11 +1053,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const backButton = document.getElementById('aiBackButton');
     if (backButton) {
         backButton.addEventListener('click', () => {
-            if (window.history.length > 1) {
-                window.history.back();
-            } else {
-                window.location.href = '/';
-            }
+                    window.location.href = '/Home/Index/550e8400-e29b-41d4-a716-446655440040/1';
+            // if (window.history.length > 1) {
+            //     window.history.back();
+            // } else {
+            //     window.location.href = '/';
+            // }
         });
     }
 

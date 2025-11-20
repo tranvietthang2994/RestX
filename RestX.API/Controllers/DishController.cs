@@ -7,7 +7,7 @@ namespace RestX.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize(Roles = "Owner,Staff")] // Only Owner and Staff can manage dishes
+    [Authorize(Roles = "Owner,Staff")] // Only Owner and Staff can manage dishes
     public class DishController : ControllerBase
     {
         private readonly IDishService dishService;
@@ -29,12 +29,12 @@ namespace RestX.API.Controllers
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns>Danh sách món ăn</returns>
-        [HttpGet("owner/{ownerId:guid}")]
-        public async Task<IActionResult> GetAllDishes(CancellationToken cancellationToken, Guid ownerId)
+        [HttpGet]
+        public async Task<IActionResult> GetAllDishes(CancellationToken cancellationToken)
         {
             try
             {
-                var dishes = await dishManagementService.GetDishesAsync(ownerId);
+                var dishes = await dishManagementService.GetDishesAsync();
                 return Ok(new { success = true, data = dishes });
             }
             catch (UnauthorizedAccessException)
@@ -54,7 +54,7 @@ namespace RestX.API.Controllers
         /// <param name="request">Thông tin món ăn</param>
         /// <returns>Kết quả tạo món ăn</returns>
         [HttpPost]
-        public async Task<IActionResult> CreateDish([FromBody] DishRequest request) // ✅ Đổi từ [FromForm] thành [FromBody]
+        public async Task<IActionResult> CreateDish([FromForm] DishRequest request)
         {
             try
             {
@@ -66,7 +66,7 @@ namespace RestX.API.Controllers
                 if (resultDishId == null)
                     return BadRequest(new { success = false, message = "Operation failed." });
 
-                return CreatedAtAction(nameof(GetDishById), new { id = resultDishId },
+                return CreatedAtAction(nameof(GetDishById), new { id = resultDishId }, 
                     new { success = true, message = "Dish created successfully!", dishId = resultDishId });
             }
             catch (Exception ex)
@@ -83,7 +83,7 @@ namespace RestX.API.Controllers
         /// <param name="request">Thông tin cập nhật</param>
         /// <returns>Kết quả cập nhật</returns>
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> UpdateDish(int id, [FromBody] DishRequest request) // ✅ Đổi từ [FromForm] thành [FromBody]
+        public async Task<IActionResult> UpdateDish(int id, [FromForm] DishRequest request)
         {
             try
             {

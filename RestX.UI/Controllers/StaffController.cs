@@ -20,7 +20,6 @@ namespace RestX.UI.Controllers
             _logger = logger;
         }
 
-        // === EXISTING STAFF FUNCTIONS ===
         [HttpGet]
         public async Task<IActionResult> StatusTable()
         {
@@ -28,7 +27,6 @@ namespace RestX.UI.Controllers
             Console.WriteLine($"Fetched tables: {tables?.Count()}");
             return View(tables ?? new List<TableStatusViewModel>());
         }
-
         [HttpGet]
         public async Task<IActionResult> CustomerRequests()
         {
@@ -42,12 +40,12 @@ namespace RestX.UI.Controllers
             var menu = await _tableService.GetMenuAsync();
             return View(menu);
         }
-
         [HttpGet]
         public async Task<IActionResult> Profile()
         {
             try
             {
+
                 var staffProfile = await _tableService.GetStaffProfileAsync();
 
                 if (staffProfile == null)
@@ -62,6 +60,21 @@ namespace RestX.UI.Controllers
                 TempData["ErrorMessage"] = "An error occurred while loading your profile.";
                 return RedirectToAction("StatusTable");
             }
+        }
+        [HttpGet]
+        public IActionResult PaymentReturn([FromQuery] string? orderCode, [FromQuery] string? status)
+        {
+            ViewBag.OrderCode = orderCode;
+            ViewBag.Status = status;
+            return View();
+        }
+
+        [HttpGet]
+        public IActionResult PaymentCancel([FromQuery] string? orderCode, [FromQuery] string? status)
+        {
+            ViewBag.OrderCode = orderCode;
+            ViewBag.Status = status;
+            return View();
         }
 
         // === STAFF MANAGEMENT FUNCTIONS FOR CRUD ===
@@ -101,7 +114,6 @@ namespace RestX.UI.Controllers
                         Message = "Unable to load staff management data"
                     });
                 }
-
 
                 return View("~/Views/Management/StaffManagement.cshtml", staffManagement);
             }
@@ -180,80 +192,6 @@ namespace RestX.UI.Controllers
             {
                 _logger.LogError(ex, "Error getting staff details for ID: {StaffId}", id);
                 return Json(new { success = false, message = "An error occurred while loading staff details" });
-            }
-        }
-
-        /// <summary>
-        /// Delete Staff - cho JavaScript deleteStaff() function
-        /// </summary>
-        [HttpPost]  // JavaScript sử dụng POST method
-        [Route("StaffManagement/Delete/{id:guid}")]
-        [Authorize(Roles = "Owner")]
-        public async Task<IActionResult> DeleteStaff(Guid id)
-        {
-            try
-            {
-                var success = await _staffUIService.DeleteStaffAsync(id);
-
-                if (success)
-                {
-                    return Json(new { success = true, message = "Staff deleted successfully" });
-                }
-
-                return Json(new { success = false, message = "Failed to delete staff" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting staff: {StaffId}", id);
-                return Json(new { success = false, message = "An error occurred while deleting staff" });
-            }
-        }
-
-        // === ADDITIONAL HELPER ENDPOINTS ===
-
-        /// <summary>
-        /// Get all staff members as JSON
-        /// </summary>
-        [HttpGet]
-        [Route("StaffManagement/GetAll")]
-        [Authorize(Roles = "Owner")]
-        public async Task<IActionResult> GetAllStaff()
-        {
-            try
-            {
-                var staffList = await _staffUIService.GetStaffListAsync();
-                return Json(new { success = true, data = staffList });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting all staff");
-                return Json(new { success = false, message = "An error occurred while loading staff list" });
-            }
-        }
-
-        /// <summary>
-        /// Get staff by ID for API calls
-        /// </summary>
-        [HttpGet]
-        [Route("StaffManagement/Get/{id:guid}")]
-        [Authorize(Roles = "Owner")]
-        public async Task<IActionResult> GetStaffById(Guid id)
-        {
-            try
-            {
-                var staff = await _staffUIService.GetStaffByIdAsync(id);
-
-                if (staff == null)
-                {
-                    return Json(new { success = false, message = "Staff not found" });
-                }
-
-                return Json(new { success = true, data = staff });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting staff by ID: {StaffId}", id);
-                return Json(new { success = false, message = "An error occurred while loading staff data" });
             }
         }
     }

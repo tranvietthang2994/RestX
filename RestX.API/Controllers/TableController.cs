@@ -7,7 +7,7 @@ namespace RestX.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize(Roles = "Owner,Staff")] // Table management
+    [Authorize(Roles = "Owner,Staff")] // Table management
     public class TableController : ControllerBase
     {
         private readonly ITableService tableService;

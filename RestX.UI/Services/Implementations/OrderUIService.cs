@@ -320,13 +320,14 @@ namespace RestX.UI.Services.Implementations
                 TableId = apiModel.TableId,
                 OrderId = apiModel.OrderId,
                 Time = apiModel.Time,
-                DishList = apiModel.DishList.Select(dishListapi => new DishCartViewModel
+                DishList = apiModel.DishList?.Select(dishListapi => new DishCartViewModel
                 {
                     DishId = dishListapi.DishId,
                     DishName = dishListapi.DishName,
                     Quantity = dishListapi.Quantity,
-                    Price = dishListapi.Price
-                }).ToList(),
+                    Price = dishListapi.Price,
+                    ImgUrl = dishListapi.ImgUrl ?? ""
+                }).ToList() ?? new List<DishCartViewModel>(),
             };
         }
 

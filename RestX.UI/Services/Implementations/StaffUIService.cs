@@ -33,7 +33,7 @@ namespace RestX.UI.Services.Implementations
                     return new List<StaffViewModel>();
                 }
 
-                var response = await _apiService.GetAsync<ApiResponse<List<StaffApiModel>>>($"api/Staff/management");
+                var response = await _apiService.GetAsync<ApiResponse<List<StaffApiModel>>>($"api/staff/owner/{ownerId}");
                 
                 if (response?.Success == true && response.Data != null)
                 {

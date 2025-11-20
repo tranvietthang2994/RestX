@@ -185,14 +185,14 @@ namespace RestX.UI.Services.Implementations
             try
             {
                 _logger.LogInformation("Clearing cart - Owner: {OwnerId}, Table: {TableId}", ownerId, tableId);
-                
-                var result = await _apiService.DeleteAsync($"api/cart/{ownerId}/{tableId}");
-                
+
+                var result = await _apiService.DeleteAsync($"api/cart/{ownerId}/table/{tableId}");
+
                 if (!result)
                 {
                     _logger.LogWarning("Failed to clear cart - Owner: {OwnerId}, Table: {TableId}", ownerId, tableId);
                 }
-                
+
                 return result;
             }
             catch (Exception ex)
@@ -232,7 +232,14 @@ namespace RestX.UI.Services.Implementations
 
         public async Task<CartViewModel> JsonToDishList(CartViewModel cart)
         {
-            cart.DishList = JsonSerializer.Deserialize<List<DishCartViewModel>>(cart.DishListJson);
+            if (!string.IsNullOrEmpty(cart.DishListJson))
+            {
+                cart.DishList = JsonSerializer.Deserialize<List<DishCartViewModel>>(cart.DishListJson) ?? new List<DishCartViewModel>();
+            }
+            else
+            {
+                cart.DishList = new List<DishCartViewModel>();
+            }
             return cart;
         }
 

@@ -342,14 +342,11 @@ window.StaffPageManager = (function () {
                         }
                     } else {
                         console.error("Failed to update dish availability:", result.message);
-                        alert(
-                            "Failed to update dish availability: " +
-                            (result.message || "Please try again.")
-                        );
+                        showToast("Update Failed", result.message || "Please try again.", "error");
                     }
                 } catch (error) {
                     console.error("Error updating dish availability:", error);
-                    alert("An error occurred. Please try again.");
+                    showToast("Error", "An error occurred. Please try again.", "error");
                 }
             };
 
@@ -375,6 +372,87 @@ window.StaffPageManager = (function () {
     function cleanupMenuPage() {
         console.log("Menu cleanup completed");
     }
+
+    // ============================================
+    // Toast Notification System
+    // ============================================
+    function showToast(title, message, type = 'info', duration = 4000) {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+
+        const icons = {
+            success: '✓',
+            error: '✕',
+            warning: '⚠',
+            info: 'ℹ'
+        };
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+            <div class="toast-icon">${icons[type] || icons.info}</div>
+            <div class="toast-content">
+                <div class="toast-title">${title}</div>
+                ${message ? `<div class="toast-message">${message}</div>` : ''}
+            </div>
+            <span class="toast-close" onclick="this.parentElement.remove()">×</span>
+        `;
+
+        container.appendChild(toast);
+
+        if (duration > 0) {
+            setTimeout(() => {
+                toast.classList.add('removing');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        return toast;
+    }
+
+    // ============================================
+    // Confirmation Modal System
+    // ============================================
+    let confirmCallback = null;
+
+    window.showConfirmModal = function(title, message, onConfirm) {
+        const modal = document.getElementById('confirmModal');
+        const titleEl = document.getElementById('confirmTitle');
+        const messageEl = document.getElementById('confirmMessage');
+        const confirmBtn = document.getElementById('confirmButton');
+
+        if (!modal || !titleEl || !messageEl || !confirmBtn) return;
+
+        titleEl.textContent = title;
+        messageEl.innerHTML = message;
+        confirmCallback = onConfirm;
+
+        // Setup confirm button click
+        confirmBtn.onclick = function() {
+            if (confirmCallback) {
+                confirmCallback();
+            }
+            closeConfirmModal();
+        };
+
+        modal.style.display = 'block';
+    };
+
+    window.closeConfirmModal = function() {
+        const modal = document.getElementById('confirmModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        confirmCallback = null;
+    };
+
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('confirmModal');
+        if (event.target === modal) {
+            closeConfirmModal();
+        }
+    });
 
     // Customer Request page handlers
     function initCustomerRequestPage() {
@@ -728,16 +806,16 @@ window.StaffPageManager = (function () {
 
                 const failed = results.filter(r => r.status === "rejected");
                 if (failed.length === 0) {
-                    alert("✅ All changes saved successfully!");
-                    location.reload();
+                    showToast("Success", "All changes saved successfully!", "success", 2000);
+                    setTimeout(() => location.reload(), 2000);
                 } else {
-                    alert(`⚠️ Some updates failed: ${failed.length} item(s). Please try again.`);
+                    showToast("Partial Failure", `Some updates failed: ${failed.length} item(s). Please try again.`, "warning");
                     console.error(failed);
                 }
 
             } catch (error) {
                 console.error("Error saving changes:", error);
-                alert("❌ An error occurred while saving changes. Please try again.");
+                showToast("Error", "An error occurred while saving changes. Please try again.", "error");
             } finally {
                 saveButton.disabled = false;
                 saveButton.textContent = "Save Changes";
@@ -761,64 +839,68 @@ window.StaffPageManager = (function () {
 
             const transition = statusTransitions[currentStatusId];
             if (!transition) {
-                alert("Cannot change this order status.");
+                showToast("Invalid Status", "Cannot change this order status.", "error");
                 return;
             }
 
-            const confirmMessage = `Are you sure you want to ${transition.action} this order?\n\nStatus will change: ${transition.current} → ${transition.next}`;
-            if (!confirm(confirmMessage)) {
-                return;
-            }
+            const confirmMessage = `
+                Are you sure you want to <strong>${transition.action}</strong> this order?<br><br>
+                Status will change: <strong>${transition.current}</strong> → <strong>${transition.next}</strong>
+            `;
 
-            const button = document.querySelector(`.btn-confirm[data-order-id="${orderId}"]`);
-            if (button) {
-                button.disabled = true;
-                button.innerHTML = '<i class="ti ti-loader"></i> Processing...';
-            }
+            showConfirmModal("Confirm Status Change", confirmMessage, async function() {
+                const button = document.querySelector(`.btn-confirm[data-order-id="${orderId}"]`);
+                if (button) {
+                    button.disabled = true;
+                    button.innerHTML = '<i class="ti ti-loader"></i> Processing...';
+                }
 
-            try {
-                const apiBaseUrl = "https://localhost:7294/api/Staff/order-status";
-                const newStatusId = currentStatusId + 1; // Move to next status
+                try {
+                    const apiBaseUrl = "https://localhost:7294/api/Staff/order-status";
+                    const newStatusId = currentStatusId + 1; // Move to next status
 
-                const response = await fetch(apiBaseUrl, {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        orderId: orderId,
-                        newStatusId: newStatusId
-                    }),
-                });
+                    const response = await fetch(apiBaseUrl, {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            orderId: orderId,
+                            newStatusId: newStatusId
+                        }),
+                    });
 
-                const result = await response.json();
+                    const result = await response.json();
 
-                if (response.ok && result.success) {
-                    console.log(`✅ Order status changed successfully to ${transition.next}`);
-                    // Wait a bit for SignalR to broadcast, then reload manually as backup
-                    setTimeout(() => {
-                        // If SignalR hasn't updated yet (button still disabled), force reload
-                        const checkButton = document.querySelector(`.btn-confirm[data-order-id="${orderId}"]`);
-                        if (checkButton && checkButton.disabled) {
-                            console.log("SignalR update delayed, reloading data manually...");
-                            location.reload();
+                    if (response.ok && result.success) {
+                        console.log(`✅ Order status changed successfully to ${transition.next}`);
+                        showToast("Success", `Order status changed to ${transition.next}`, "success");
+
+                        // Wait a bit for SignalR to broadcast, then reload manually as backup
+                        setTimeout(() => {
+                            // If SignalR hasn't updated yet (button still disabled), force reload
+                            const checkButton = document.querySelector(`.btn-confirm[data-order-id="${orderId}"]`);
+                            if (checkButton && checkButton.disabled) {
+                                console.log("SignalR update delayed, reloading data manually...");
+                                location.reload();
+                            }
+                        }, 2000);
+                    } else {
+                        showToast("Update Failed", result.message || "Please try again.", "error");
+                        if (button) {
+                            button.disabled = false;
+                            button.innerHTML = `<i class="ti ti-arrow-right"></i> ${getNextStatusButtonText(currentStatusId)}`;
                         }
-                    }, 2000);
-                } else {
-                    alert(`⚠️ Failed to update order status: ${result.message || "Please try again."}`);
+                    }
+                } catch (error) {
+                    console.error("Error updating order status:", error);
+                    showToast("Error", "An error occurred. Please try again.", "error");
                     if (button) {
                         button.disabled = false;
                         button.innerHTML = `<i class="ti ti-arrow-right"></i> ${getNextStatusButtonText(currentStatusId)}`;
                     }
                 }
-            } catch (error) {
-                console.error("Error updating order status:", error);
-                alert("❌ An error occurred. Please try again.");
-                if (button) {
-                    button.disabled = false;
-                    button.innerHTML = `<i class="ti ti-arrow-right"></i> ${getNextStatusButtonText(currentStatusId)}`;
-                }
-            }
+            });
         };
 
         // Payment checkout functionality
@@ -858,11 +940,11 @@ window.StaffPageManager = (function () {
                     startPaymentStatusPolling(result.data.orderCode, orderId);
                 } else {
                     console.error("Payment creation failed:", result);
-                    alert(`❌ Failed to generate payment: ${result.message || "Please try again."}`);
+                    showToast("Payment Failed", result.message || "Please try again.", "error");
                 }
             } catch (error) {
                 console.error("Error creating payment:", error);
-                alert(`❌ An error occurred: ${error.message}`);
+                showToast("Error", error.message || "An error occurred", "error");
             }
         };
 
@@ -878,16 +960,23 @@ window.StaffPageManager = (function () {
                     const response = await fetch(`https://localhost:7294/api/Payment/${orderCode}`);
                     const result = await response.json();
 
+                    console.log("Payment status check:", result);
+
                     if (response.ok && result.success) {
                         const paymentStatus = result.data.status;
+                        console.log("Current payment status:", paymentStatus);
 
                         if (paymentStatus === "PAID" || paymentStatus === "COMPLETED") {
                             // Payment successful!
+                            console.log("Payment completed! Triggering success handler...");
                             clearInterval(paymentCheckInterval);
+                            paymentCheckInterval = null;
                             await handlePaymentSuccess(orderId);
                         } else if (paymentStatus === "CANCELLED" || paymentStatus === "EXPIRED") {
+                            console.log("Payment cancelled or expired");
                             clearInterval(paymentCheckInterval);
-                            document.getElementById("paymentInfo").innerHTML = '<p style="color: #e74c3c; font-size: 1.2em;">❌ Payment cancelled or expired</p>';
+                            paymentCheckInterval = null;
+                            showToast("Payment Failed", "Payment was cancelled or expired", "error");
                         }
                     }
                 } catch (error) {
@@ -904,10 +993,12 @@ window.StaffPageManager = (function () {
             }
 
             // Show success notification
-            alert('✅ Payment completed successfully! The page will refresh to update the order list.');
+            showToast('Payment Completed', 'Payment successful! Refreshing order list...', 'success', 2000);
 
             // Reload to fetch updated order list (now marked as PAID)
-            location.reload();
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
         }
 
         window.closePaymentModal = function() {

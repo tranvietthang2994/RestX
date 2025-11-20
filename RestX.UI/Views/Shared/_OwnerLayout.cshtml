@@ -48,10 +48,7 @@
                             <span class="hide-menu">Managements</span>
                         </li>
                         <li class="sidebar-item">
-                            <a class="sidebar-link"
-                               asp-controller="Customer"
-                               asp-action="Index"
-                               aria-expanded="false">
+                            <a class="sidebar-link" href="/Customer/Index" aria-expanded="false">
                                 <span>
                                     <i class="bi bi-basket2-fill"></i>
                                 </span>
@@ -59,10 +56,7 @@
                             </a>
                         </li>
                         <li class="sidebar-item">
-                            <a class="sidebar-link"
-                               asp-controller="Table"
-                               asp-action="Index"
-                               aria-expanded="false">
+                            <a class="sidebar-link" href="/Table/Index" aria-expanded="false">
                                 <span>
                                     <i class="bi bi-grid-1x2-fill"></i>
                                 </span>
@@ -70,10 +64,7 @@
                             </a>
                         </li>
                         <li class="sidebar-item">
-                            <a class="sidebar-link"
-                               asp-controller="Dish"
-                               asp-action="Index"
-                               aria-expanded="false">
+                            <a class="sidebar-link" href="/Dish/Index" aria-expanded="false">
                                 <span>
                                     <i class="bi bi-cup-hot-fill"></i>
                                 </span>
@@ -81,27 +72,21 @@
                             </a>
                         </li>
                         <li class="sidebar-item">
-                            <a class="sidebar-link"
-                               asp-controller="Staff"
-                               asp-action="StaffManagement"
-                               aria-expanded="false">
+                            <a class="sidebar-link" href="/StaffManagement/StaffManagement" aria-expanded="false">
                                 <span>
                                     <i class="bi bi-people-fill"></i>
                                 </span>
                                 <span class="hide-menu">Staff Management</span>
                             </a>
                         </li>
-                        @* <li class="sidebar-item">
-                            <a class="sidebar-link"
-                               asp-controller="Table"
-                               asp-action="TableQrCode"
-                               aria-expanded="false">
+                        <li class="sidebar-item">
+                            <a class="sidebar-link" href="/Table/createqr" aria-expanded="false">
                                 <span>
                                     <i class="bi bi-qr-code"></i>
                                 </span>
                                 <span class="hide-menu">Table QR Code</span>
                             </a>
-                        </li> *@
+                        </li>
                         <li class="nav-small-cap">
                             <i class="bi bi-plus-circle-fill nav-small-cap-icon"></i>
                             <span class="hide-menu">Extra</span>
@@ -115,7 +100,7 @@
                             </a>
                         </li>
                         <li class="sidebar-item">
-                            <a class="sidebar-link" href="/Owner/Chat" aria-expanded="false">
+                            <a class="sidebar-link" href="/Owner/Settings" aria-expanded="false">
                                 <span>
                                     <i class="bi bi-chat-dots-fill"></i>
                                 </span>

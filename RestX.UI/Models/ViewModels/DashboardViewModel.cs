@@ -27,28 +27,25 @@ namespace RestX.UI.Models.ViewModels
 
         public List<RecentOrderViewModel> RecentOrders { get; set; } = new();
         public List<ActivityViewModel> RecentActivities { get; set; } = new();
-        public string? ErrorMessage { get; set; }
 
+        public string? ErrorMessage { get; set; }
     }
 
     public class RecentOrderViewModel
     {
-        public string OrderId { get; set; }
-        public string CustomerName { get; set; }
-        public string TableName { get; set; }
-        public List<DishViewModel> Dishes { get; set; } = new();
-        public string Status { get; set; }
-        public decimal Amount { get; set; }
+        public string OrderId { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
+        public string TableName { get; set; } = string.Empty;
+        public decimal Total { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public DateTime OrderDate { get; set; }
     }
 
     public class ActivityViewModel
     {
+        public string Id { get; set; } = string.Empty;
+        public string Activity { get; set; } = string.Empty;
         public DateTime Time { get; set; }
-        public string TableName { get; set; } = string.Empty;
-        public string CustomerName { get; set; } = string.Empty;
-        public bool IsPaid { get; set; }
-        public decimal TotalAmount { get; set; }
-        public List<DishViewModel> Dishes { get; set; } = new();
-
+        public string Type { get; set; } = string.Empty;
     }
 }

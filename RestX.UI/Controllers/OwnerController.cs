@@ -5,7 +5,7 @@ using RestX.UI.Services.Interfaces;
 
 namespace RestX.UI.Controllers
 {
-    //[Authorize(Roles = "Owner")]
+    [Authorize(Roles = "Owner")]
     public class OwnerController : Controller
     {
         private readonly IOwnerUIService _ownerService;
@@ -29,13 +29,13 @@ namespace RestX.UI.Controllers
             try
             {
                 _logger.LogInformation("Loading owner profile page");
-
+                
                 var profile = await _ownerService.GetOwnerProfileAsync();
-
+                
                 if (profile == null)
                 {
-                    return View("Error", new ErrorViewModel
-                    {
+                    return View("Error", new ErrorViewModel 
+                    { 
                         Message = "Unable to load owner profile",
                         StatusCode = 404
                     });
@@ -46,8 +46,8 @@ namespace RestX.UI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading owner profile page");
-                return View("Error", new ErrorViewModel
-                {
+                return View("Error", new ErrorViewModel 
+                { 
                     Message = "An error occurred while loading the profile"
                 });
             }
@@ -69,7 +69,7 @@ namespace RestX.UI.Controllers
                 }
 
                 var (success, message) = await _ownerService.UpdateOwnerProfileAsync(model);
-
+                
                 if (success)
                 {
                     TempData["SuccessMessage"] = message ?? "Profile updated successfully!";
@@ -106,7 +106,7 @@ namespace RestX.UI.Controllers
                 }
 
                 var (success, message) = await _ownerService.UpdateOwnerProfileAsync(model);
-
+                
                 return Json(new { success, message = message ?? (success ? "Profile updated successfully!" : "Update failed!") });
             }
             catch (Exception ex)
@@ -126,13 +126,13 @@ namespace RestX.UI.Controllers
             try
             {
                 _logger.LogInformation("Loading owner dashboard");
-
+                
                 var dashboard = await _ownerService.GetDashboardAsync();
-
+                
                 if (dashboard == null)
                 {
-                    return View("Error", new ErrorViewModel
-                    {
+                    return View("Error", new ErrorViewModel 
+                    { 
                         Message = "Unable to load dashboard data",
                         StatusCode = 500
                     });
@@ -140,8 +140,8 @@ namespace RestX.UI.Controllers
 
                 if (!string.IsNullOrEmpty(dashboard.ErrorMessage))
                 {
-                    return View("Error", new ErrorViewModel
-                    {
+                    return View("Error", new ErrorViewModel 
+                    { 
                         Message = dashboard.ErrorMessage
                     });
                 }
@@ -151,8 +151,8 @@ namespace RestX.UI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading owner dashboard");
-                return View("Error", new ErrorViewModel
-                {
+                return View("Error", new ErrorViewModel 
+                { 
                     Message = "An error occurred while loading the dashboard"
                 });
             }
@@ -168,12 +168,12 @@ namespace RestX.UI.Controllers
             try
             {
                 var dashboard = await _ownerService.GetDashboardAsync();
-
+                
                 if (dashboard != null && string.IsNullOrEmpty(dashboard.ErrorMessage))
                 {
                     return Json(new { success = true, data = dashboard });
                 }
-
+                
                 return Json(new { success = false, message = dashboard?.ErrorMessage ?? "Failed to load dashboard data" });
             }
             catch (Exception ex)
@@ -193,11 +193,11 @@ namespace RestX.UI.Controllers
             try
             {
                 var profile = await _ownerService.GetOwnerProfileAsync();
-
+                
                 if (profile == null)
                 {
-                    return View("Error", new ErrorViewModel
-                    {
+                    return View("Error", new ErrorViewModel 
+                    { 
                         Message = "Unable to load restaurant information"
                     });
                 }
@@ -207,8 +207,8 @@ namespace RestX.UI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading restaurant info page");
-                return View("Error", new ErrorViewModel
-                {
+                return View("Error", new ErrorViewModel 
+                { 
                     Message = "An error occurred while loading restaurant information"
                 });
             }
@@ -229,15 +229,14 @@ namespace RestX.UI.Controllers
                     return Json(new { success = false, message = "Invalid data provided" });
                 }
 
-                // Using the existing UpdateOwnerProfileAsync method since UpdateRestaurantInfoAsync doesn't exist
-                var (success, message) = await _ownerService.UpdateOwnerProfileAsync(model);
-
+                var success = await _ownerService.UpdateRestaurantInfoAsync(model);
+                
                 if (success)
                 {
-                    return Json(new { success = true, message = message ?? "Restaurant information updated successfully" });
+                    return Json(new { success = true, message = "Restaurant information updated successfully" });
                 }
-
-                return Json(new { success = false, message = message ?? "Failed to update restaurant information" });
+                
+                return Json(new { success = false, message = "Failed to update restaurant information" });
             }
             catch (Exception ex)
             {
@@ -245,122 +244,5 @@ namespace RestX.UI.Controllers
                 return Json(new { success = false, message = "An error occurred while updating restaurant information" });
             }
         }
-
-        [HttpGet]
-        public async Task<IActionResult> GetRevenueStatistics(DateTime? from = null, DateTime? to = null)
-        {
-            try
-            {
-                var statistics = await _ownerService.GetRevenueStatisticsAsync(from, to);
-
-                if (statistics == null)
-                {
-                    return Json(new { success = false, message = "Failed to load revenue statistics" });
-                }
-
-                if (!string.IsNullOrEmpty(statistics.ErrorMessage))
-                {
-                    return Json(new { success = false, message = statistics.ErrorMessage });
-                }
-
-                return Json(new { success = true, data = statistics });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting revenue statistics");
-                return Json(new { success = false, message = "An error occurred while loading revenue statistics" });
-            }
-        }
-
-        /// <summary>
-        /// Get order statistics
-        /// </summary>
-        /// <param name="from">From date</param>
-        /// <param name="to">To date</param>
-        /// <returns></returns>
-        [HttpGet]
-        public async Task<IActionResult> GetOrderStatistics(DateTime? from = null, DateTime? to = null)
-        {
-            try
-            {
-                var statistics = await _ownerService.GetOrderStatisticsAsync(from, to);
-
-                if (statistics == null)
-                {
-                    return Json(new { success = false, message = "Failed to load order statistics" });
-                }
-
-                if (!string.IsNullOrEmpty(statistics.ErrorMessage))
-                {
-                    return Json(new { success = false, message = statistics.ErrorMessage });
-                }
-
-                return Json(new { success = true, data = statistics });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting order statistics");
-                return Json(new { success = false, message = "An error occurred while loading order statistics" });
-            }
-        }
-
-        /// <summary>
-        /// Get overview report
-        /// </summary>
-        /// <param name="period">Report period</param>
-        /// <returns></returns>
-        [HttpGet]
-        public async Task<IActionResult> GetOverviewReport(string period = "month")
-        {
-            try
-            {
-                var report = await _ownerService.GetOverviewReportAsync(period);
-
-                if (report == null)
-                {
-                    return Json(new { success = false, message = "Failed to load overview report" });
-                }
-
-                if (!string.IsNullOrEmpty(report.ErrorMessage))
-                {
-                    return Json(new { success = false, message = report.ErrorMessage });
-                }
-
-                return Json(new { success = true, data = report });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting overview report");
-                return Json(new { success = false, message = "An error occurred while loading overview report" });
-            }
-        }
-
-        /// <summary>
-        /// Get top dishes
-        /// </summary>
-        /// <param name="limit">Number of dishes</param>
-        /// <param name="period">Period for statistics</param>
-        /// <returns></returns>
-        [HttpGet]
-        public async Task<IActionResult> GetTopDishes(int limit = 10, string period = "month")
-        {
-            try
-            {
-                var topDishes = await _ownerService.GetTopDishesAsync(limit, period);
-
-                if (topDishes == null)
-                {
-                    return Json(new { success = false, message = "Failed to load top dishes" });
-                }
-
-                return Json(new { success = true, data = topDishes });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting top dishes");
-                return Json(new { success = false, message = "An error occurred while loading top dishes" });
-            }
-        }
-
     }
 }

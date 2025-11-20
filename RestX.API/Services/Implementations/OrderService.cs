@@ -130,7 +130,7 @@ namespace RestX.API.Services.Implementations
                     // Check if order has any successful payment
                     var hasSuccessfulPayment = order.Payments?.Any(p =>
                         p.IsActive == true &&
-                        (p.PayOSStatus == "PAID" || p.PayOSStatus == "COMPLETED")
+                        (p.PayOSStatus == "Paid" || p.PayOSStatus == "Completed")
                     ) ?? false;
 
                     var latestPayment = order.Payments?
@@ -191,10 +191,10 @@ namespace RestX.API.Services.Implementations
                         dishCart.Add(new DishCartViewModel()
                         {
                             DishId = orderDetail.DishId,
-                            DishName = orderDetail.Dish.Name,
+                            DishName = orderDetail.Dish?.Name ?? "Unknown Dish",
                             Quantity = orderDetail.Quantity,
                             Price = orderDetail.Price,
-                            ImgUrl = orderDetail.Dish.File.Url,
+                            ImgUrl = orderDetail.Dish?.File?.Url ?? "",
                         });
                     }
 

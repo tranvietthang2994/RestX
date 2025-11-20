@@ -4,6 +4,6 @@ namespace RestX.API.Services.Interfaces
 {
     public interface IDishManagementService
     {
-        Task<DishesManagementViewModel> GetDishesAsync(Guid ownerId);
+        Task<DishesManagementViewModel> GetDishesAsync();
     }
 }
