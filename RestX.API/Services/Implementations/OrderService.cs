@@ -130,7 +130,7 @@ namespace RestX.API.Services.Implementations
                     // Check if order has any successful payment
                     var hasSuccessfulPayment = order.Payments?.Any(p =>
                         p.IsActive == true &&
-                        (p.PayOSStatus == "PAID" || p.PayOSStatus == "COMPLETED")
+                        (p.PayOSStatus == "Paid" || p.PayOSStatus == "Completed")
                     ) ?? false;
 
                     var latestPayment = order.Payments?

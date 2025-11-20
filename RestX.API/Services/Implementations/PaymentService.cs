@@ -111,10 +111,10 @@ namespace RestX.API.Services.Implementations
 
         public async Task<PaymentInfoResponse> GetPaymentInfoAsync(long orderCode)
         {
-            // Get payment from database with order relationship
+            // Get payment from database with order relationship and table
             var payments = await Repo.GetAsync<Payment>(
                 filter: p => p.OrderCode == orderCode && p.IsActive == true,
-                includeProperties: "Order"
+                includeProperties: "Order,Order.Table"
             );
 
             var payment = payments.FirstOrDefault();
@@ -127,6 +127,7 @@ namespace RestX.API.Services.Implementations
             // Update payment status if changed
             string currentStatus = payOSInfo.Status.ToString();
             bool wasUnpaid = payment.PayOSStatus != "PAID" && payment.PayOSStatus != "COMPLETED";
+            bool isPaidNow = currentStatus == "PAID" || currentStatus == "COMPLETED";
 
             if (currentStatus != payment.PayOSStatus)
             {
@@ -134,19 +135,24 @@ namespace RestX.API.Services.Implementations
                 payment.ModifiedBy = "System";
                 payment.ModifiedDate = DateTime.UtcNow;
 
-                if (currentStatus == "PAID" || currentStatus == "COMPLETED")
+                if (isPaidNow)
                 {
                     payment.PaidAt = DateTime.UtcNow;
-
-                    // Update table status to Cleaning (4) when payment is completed and order status is Completed (4)
-                    if (wasUnpaid && payment.Order != null && payment.Order.OrderStatusId == 4)
-                    {
-                        await _tableService.UpdateTableStatusAsync(payment.Order.TableId, 4); // 4 = Cleaning
-                    }
                 }
 
                 Repo.Update(payment);
                 await Repo.SaveAsync();
+            }
+
+            // Always ensure table status is updated to Cleaning if payment is completed
+            // This handles cases where webhook already updated payment but table status wasn't updated
+            if (isPaidNow && payment.Order != null && payment.Order.Table != null)
+            {
+                // Only update if table is not already in Cleaning status
+                if (payment.Order.Table.TableStatusId != 4)
+                {
+                    await _tableService.UpdateTableStatusAsync(payment.Order.TableId, 4); // 4 = Cleaning
+                }
             }
 
             return new PaymentInfoResponse
@@ -197,8 +203,7 @@ namespace RestX.API.Services.Implementations
         {
             try
             {
-                // For now, just parse the webhook body manually
-                // PayOS v2.0 might have different webhook structure
+                // Parse webhook body
                 using var doc = JsonDocument.Parse(webhookBody);
                 var root = doc.RootElement;
 
@@ -210,23 +215,63 @@ namespace RestX.API.Services.Implementations
                     return false;
 
                 long orderCode = orderCodeElement.GetInt64();
+
+                // Get status from webhook - PayOS sends status in data.status field
+                string? paymentStatus = null;
+                if (dataElement.TryGetProperty("status", out var statusElement))
+                {
+                    paymentStatus = statusElement.GetString();
+                }
+
+                // Get transaction ID if available
+                // Get transaction ID if available
+                string? transactionId = null;
+
+                if (dataElement.TryGetProperty("reference", out var refElement))
+                {
+                    transactionId = refElement.GetString();
+                }
+                else if (dataElement.TryGetProperty("transactionDateTime", out var txElement))
+                {
+                    transactionId = txElement.GetString();
+                }
+
+
+                // Fallback: check success boolean for older webhook format
                 bool success = root.TryGetProperty("success", out var successElement) && successElement.GetBoolean();
+
+                // Determine if payment is successful
+                bool isPaid = success || paymentStatus == "PAID" || paymentStatus == "COMPLETED";
 
                 // Update payment in database
                 var payments = await Repo.GetAsync<Payment>(
-                    filter: p => p.OrderCode == orderCode && p.IsActive == true
+                    filter: p => p.OrderCode == orderCode && p.IsActive == true,
+                    includeProperties: "Order"
                 );
 
                 var payment = payments.FirstOrDefault();
                 if (payment != null)
                 {
-                    payment.PayOSStatus = success ? "PAID" : "FAILED";
-                    payment.PaidAt = success ? DateTime.UtcNow : null;
+                    bool wasUnpaid = payment.PayOSStatus != "PAID" && payment.PayOSStatus != "COMPLETED";
+
+                    // Update payment status
+                    payment.PayOSStatus = paymentStatus ?? (isPaid ? "PAID" : "FAILED");
+                    payment.PaidAt = isPaid ? DateTime.UtcNow : null;
+                    if (!string.IsNullOrEmpty(transactionId))
+                    {
+                        payment.TransactionId = transactionId;
+                    }
                     payment.ModifiedBy = "WebhookSystem";
                     payment.ModifiedDate = DateTime.UtcNow;
 
                     Repo.Update(payment);
                     await Repo.SaveAsync();
+
+                    // Update table status to Cleaning (4) when payment is completed
+                    if (isPaid && wasUnpaid && payment.Order != null)
+                    {
+                        await _tableService.UpdateTableStatusAsync(payment.Order.TableId, 4); // 4 = Cleaning
+                    }
                 }
 
                 return true;
