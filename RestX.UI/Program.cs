@@ -23,11 +23,13 @@ builder.Services.AddSession(options =>
 builder.Services.AddTransient<AuthTokenHandler>();
 
 // HTTP Client services for API calls
+var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7294/";
 builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 {
-    client.BaseAddress = new Uri("https://localhost:7294/"); // RestX.API URL
+    client.BaseAddress = new Uri(apiBaseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
-    client.Timeout = TimeSpan.FromSeconds(30);
+    var timeoutSeconds = builder.Configuration.GetValue<int>("ApiSettings:Timeout", 30);
+    client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
 })
 .AddHttpMessageHandler<AuthTokenHandler>();
 
@@ -35,6 +37,7 @@ builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 builder.Services.AddAutoMapper(typeof(Program));
 
 // Register services
+//builder.Services.AddScoped<IApiService, ApiService>();
 builder.Services.AddScoped<IStaffService, StaffService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -61,8 +64,8 @@ app.UseStaticFiles();
 
 app.UseRouting();
 app.UseSession();
-//app.UseAuthentication();
-//app.UseAuthorization();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",

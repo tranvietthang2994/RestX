@@ -425,7 +425,7 @@ app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "RestX API v1 (No Auth)");
-    c.RoutePrefix = string.Empty;
+    //c.RoutePrefix = string.Empty;
 });
 
 // Error Handling
@@ -449,8 +449,8 @@ app.UseRouting();
 
 // 🟨 Session is needed for AuthCustomerService and AuthController
 app.UseSession();
-app.UseAuthentication();
-app.UseAuthorization();
+//app.UseAuthentication();
+//app.UseAuthorization();
 
 // Controllers
 app.MapControllers();

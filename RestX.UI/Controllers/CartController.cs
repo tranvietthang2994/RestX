@@ -67,8 +67,6 @@ namespace RestX.UI.Controllers
             if (tempModel != null)
             {
                 model = await _cartService.JsonToCartViewModel(tempModel.ToString());
-                // Clear tempModel after reading to prevent reuse
-                TempData.Remove("tempModel");
             }
 
             model = await _cartService.JsonToDishList(model);
@@ -325,10 +323,11 @@ namespace RestX.UI.Controllers
 
                 var success = await _cartService.CheckoutAsync(ownerId, tableId, model);
 
+                TempData["tempModel"] = JsonSerializer.Serialize(model);
+
+
                 if (success)
                 {
-                    // Clear tempModel after successful checkout
-                    TempData.Remove("tempModel");
                     TempData["Message"] = "Order placed successfully!";
                     return RedirectToAction("Index", "Home", new
                     {
@@ -337,10 +336,8 @@ namespace RestX.UI.Controllers
                     });
                 }
 
-                // Only save tempModel if checkout failed
-                model.Message = "Failed to place order. Please try again.";
-                TempData["tempModel"] = JsonSerializer.Serialize(model);
-                return RedirectToAction("Index", "Cart", new
+                TempData["Message"] = "Failed to place order";
+                return RedirectToAction("Index", "Home", new
                 {
                     OwnerId = model.OwnerId,
                     TableId = model.TableId

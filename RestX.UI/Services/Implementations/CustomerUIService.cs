@@ -1,6 +1,7 @@
 using RestX.UI.Models.ApiModels;
 using RestX.UI.Models.ViewModels;
 using RestX.UI.Services.Interfaces;
+using System.Text.Json;
 
 namespace RestX.UI.Services.Implementations
 {
@@ -26,27 +27,174 @@ namespace RestX.UI.Services.Implementations
             {
                 var currentUser = await _authService.GetCurrentUserAsync();
                 var ownerId = currentUser?.OwnerId ?? currentUser?.Id;
-                
+
                 if (ownerId == null)
                 {
                     _logger.LogWarning("No owner context found for customers");
                     return new List<CustomerViewModel>();
                 }
 
-                var response = await _apiService.GetAsync<ApiResponse<List<CustomerApiModel>>>($"api/customer/owner/{ownerId}");
-                
-                if (response?.Success == true && response.Data != null)
+                _logger.LogInformation("Getting customers for owner: {OwnerId}", ownerId);
+
+                // Try different API endpoints that might exist
+                string[] possibleEndpoints = {
+            $"api/customer/owner/{ownerId}",
+            $"api/customer",
+            $"api/customer/list",
+            $"api/customers/owner/{ownerId}",
+            $"api/customers"
+        };
+
+                string? responseString = null;
+                string? usedEndpoint = null;
+
+                foreach (var endpoint in possibleEndpoints)
                 {
-                    return response.Data.Select(MapToCustomerViewModel).ToList();
+                    try
+                    {
+                        _logger.LogInformation("Trying endpoint: {Endpoint}", endpoint);
+                        responseString = await _apiService.GetStringAsync(endpoint);
+
+                        if (!string.IsNullOrEmpty(responseString))
+                        {
+                            usedEndpoint = endpoint;
+                            _logger.LogInformation("Successfully got response from: {Endpoint}", endpoint);
+                            break;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning("Failed to get data from endpoint {Endpoint}: {Error}", endpoint, ex.Message);
+                        continue;
+                    }
                 }
-                
-                _logger.LogWarning("Failed to get customers for owner: {OwnerId}", ownerId);
+
+                if (!string.IsNullOrEmpty(responseString))
+                {
+                    _logger.LogInformation("Customer API Response from {Endpoint}: {Response}", usedEndpoint, responseString);
+
+                    try
+                    {
+                        // Parse the API response which might have structure: { "success": true, "data": [...] }
+                        var apiResponseWrapper = JsonSerializer.Deserialize<ApiResponse<JsonElement[]>>(responseString, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                        if (apiResponseWrapper?.Success == true && apiResponseWrapper.Data != null)
+                        {
+                            var customers = new List<CustomerViewModel>();
+
+                            foreach (var customerElement in apiResponseWrapper.Data)
+                            {
+                                var customer = ParseCustomerFromJsonElement(customerElement, ownerId);
+                                if (customer != null)
+                                {
+                                    customers.Add(customer);
+                                }
+                            }
+
+                            _logger.LogInformation("Successfully parsed {Count} customers from API response wrapper", customers.Count);
+                            return customers;
+                        }
+                        else
+                        {
+                            // Fallback: Try direct array parsing if it's not wrapped
+                            var jsonDocument = JsonDocument.Parse(responseString);
+                            var customers = new List<CustomerViewModel>();
+
+                            if (jsonDocument.RootElement.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (var element in jsonDocument.RootElement.EnumerateArray())
+                                {
+                                    var customer = ParseCustomerFromJsonElement(element, ownerId);
+                                    if (customer != null)
+                                    {
+                                        customers.Add(customer);
+                                    }
+                                }
+
+                                _logger.LogInformation("Successfully parsed {Count} customers from direct array", customers.Count);
+                                return customers;
+                            }
+                            else if (jsonDocument.RootElement.ValueKind == JsonValueKind.Object)
+                            {
+                                // Try to parse single object response
+                                if (jsonDocument.RootElement.TryGetProperty("data", out var dataProperty) &&
+                                    dataProperty.ValueKind == JsonValueKind.Array)
+                                {
+                                    foreach (var element in dataProperty.EnumerateArray())
+                                    {
+                                        var customer = ParseCustomerFromJsonElement(element, ownerId);
+                                        if (customer != null)
+                                        {
+                                            customers.Add(customer);
+                                        }
+                                    }
+                                    return customers;
+                                }
+                            }
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogError(ex, "Failed to parse customer API response from {Endpoint}", usedEndpoint);
+                        _logger.LogError("Raw response that failed to parse: {Response}", responseString);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("All customer API endpoints returned empty responses");
+                }
+
                 return new List<CustomerViewModel>();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting customers");
                 return new List<CustomerViewModel>();
+            }
+        }
+
+        private CustomerViewModel? ParseCustomerFromJsonElement(JsonElement customerElement, Guid? expectedOwnerId)
+        {
+            try
+            {
+                var customer = new CustomerViewModel
+                {
+                    Id = customerElement.TryGetProperty("id", out var idProp) &&
+                         Guid.TryParse(idProp.GetString(), out var id) ? id : Guid.Empty,
+                    Name = customerElement.TryGetProperty("name", out var nameProp) ? nameProp.GetString() ?? "" : "",
+                    Phone = customerElement.TryGetProperty("phone", out var phoneProp) ? phoneProp.GetString() ?? "" : "",
+                    Email = customerElement.TryGetProperty("email", out var emailProp) ? emailProp.GetString() : null,
+                    Address = customerElement.TryGetProperty("address", out var addressProp) ? addressProp.GetString() : null,
+                    Point = customerElement.TryGetProperty("point", out var pointProp) ? pointProp.GetInt32() : 0,
+                    IsActive = customerElement.TryGetProperty("isActive", out var activeProp) ? activeProp.GetBoolean() : true,
+                    OwnerId = customerElement.TryGetProperty("ownerId", out var ownerProp) &&
+                             Guid.TryParse(ownerProp.GetString(), out var ownerGuid) ? ownerGuid : null,
+                    CreatedDate = customerElement.TryGetProperty("createdDate", out var createdProp) &&
+                                 DateTime.TryParse(createdProp.GetString(), out var created) ? created : DateTime.Now,
+                    ModifiedDate = customerElement.TryGetProperty("modifiedDate", out var modifiedProp) &&
+                                  DateTime.TryParse(modifiedProp.GetString(), out var modified) ? modified : null,
+                    DateOfBirth = customerElement.TryGetProperty("dateOfBirth", out var dobProp) &&
+                                 DateTime.TryParse(dobProp.GetString(), out var dob) ? dob : null
+                };
+
+                // Filter by owner if we have an expected owner ID and the customer has an owner ID
+                if (expectedOwnerId.HasValue && customer.OwnerId.HasValue &&
+                    customer.OwnerId.Value != expectedOwnerId.Value)
+                {
+                    _logger.LogDebug("Filtering out customer {CustomerId} - wrong owner {CustomerOwnerId} vs expected {ExpectedOwnerId}",
+                        customer.Id, customer.OwnerId, expectedOwnerId);
+                    return null;
+                }
+
+                return customer;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse customer element");
+                return null;
             }
         }
 
@@ -119,6 +267,7 @@ namespace RestX.UI.Services.Implementations
                     Name = model.Name,
                     Phone = model.Phone,
                     Email = model.Email,
+                    Point = model.Point,
                     Address = model.Address,
                     DateOfBirth = model.DateOfBirth,
                     OwnerId = ownerId,
