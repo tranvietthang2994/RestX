@@ -1,10 +1,9 @@
 version: '3.8'
 
 services:
-  # 1. Database
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: restx_sql  # Đặt tên khớp với container bạn đang chạy
+    container_name: restx_sql
     restart: always
     environment:
       - ACCEPT_EULA=Y
@@ -13,43 +12,37 @@ services:
     ports:
       - "1433:1433"
     volumes:
-      # Trỏ đúng vào thư mục data bạn đã tạo ở bước trước trên VPS
       - ../sqlserver/data:/var/opt/mssql
     networks:
       - restx-network
 
-  # 2. API Backend
   api:
-    build:
-      context: .
-      dockerfile: RestX.API/Dockerfile
+    image: tranvietthangdev/restx-api:latest
     container_name: restx_api
     restart: always
     environment:
       - ConnectionStrings__RestX=Server=db,1433;Database=RestX_RestaurantManagement;User Id=sa;Password=MatKhauManh!2025;TrustServerCertificate=True;
-      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ApiSettings__BaseUrl=http://160.250.5.94:5000/
     ports:
-      - "5000:8080" # API sẽ chạy ở cổng 5000 của VPS
+      - "5000:8080"
     depends_on:
       - db
     networks:
       - restx-network
 
-  # 3. UI Frontend (MVC)
   ui:
-    build:
-      context: .
-      dockerfile: RestX.UI/Dockerfile
+    image: tranvietthangdev/restx-ui:latest
     container_name: restx_ui
     restart: always
     environment:
-      # UI kết nối DB (nếu cần)
       - ConnectionStrings__RestX=Server=db,1433;Database=RestX_RestaurantManagement;User Id=sa;Password=MatKhauManh!2025;TrustServerCertificate=True;
-      # UI gọi API qua tên service 'api'
-      - ApiSettings__BaseUrl=http://api:8080
-      - ASPNETCORE_ENVIRONMENT=Production
+      - ApiSettings__BaseUrl=http://api:8080/
+      - VnPaySettings__ReturnUrl=http://160.250.5.94/Staff/PaymentReturn
+      - VnPaySettings__CancelUrl=http://160.250.5.94/Staff/PaymentCancel
+      - ASPNETCORE_ENVIRONMENT=Development
     ports:
-      - "80:8080" # Web chính chạy ở cổng 80 (http mặc định)
+      - "80:8080"
     depends_on:
       - api
     networks:

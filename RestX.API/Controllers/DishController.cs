@@ -7,7 +7,7 @@ namespace RestX.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Owner,Staff")] // Only Owner and Staff can manage dishes
+    //[Authorize(Roles = "Owner,Staff")] // Only Owner and Staff can manage dishes
     public class DishController : ControllerBase
     {
         private readonly IDishService dishService;

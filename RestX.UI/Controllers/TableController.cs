@@ -5,7 +5,7 @@ using RestX.UI.Services.Interfaces;
 
 namespace RestX.UI.Controllers
 {
-    [Authorize(Roles = "Owner,Staff")]
+    //[Authorize(Roles = "Owner,Staff")]
     public class TableController : Controller
     {
         private readonly IApiService _apiService;

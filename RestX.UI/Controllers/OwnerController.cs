@@ -5,7 +5,7 @@ using RestX.UI.Services.Interfaces;
 
 namespace RestX.UI.Controllers
 {
-    [Authorize(Roles = "Owner")]
+    //[Authorize(Roles = "Owner")]
     public class OwnerController : Controller
     {
         private readonly IOwnerUIService _ownerService;
