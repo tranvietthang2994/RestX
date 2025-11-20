@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using RestX.API.Data.Repository.Interfaces;
-using RestX.API.Models.Entities;
 using RestX.API.Models.ViewModels;
 using RestX.API.Services.Interfaces;
 
@@ -25,15 +24,9 @@ namespace RestX.API.Services.Implementations
             this.mapper = mapper;
         }
 
-        public async Task<DishesManagementViewModel> GetDishesAsync(Guid ownerId)
+        public async Task<DishesManagementViewModel> GetDishesAsync()
         {
-
-            var dishes = await Repo.GetAsync<Dish>(
-                filter: d => d.OwnerId == ownerId && d.IsActive == true,
-                includeProperties: "Category,File"
-            );
-            dishes = dishes.OrderBy(d => d.Name).ToList();
-
+            var dishes = await dishService.GetDishesByOwnerIdAsync();
             var categories = await categoryService.GetCategoriesAsync();
 
             return new DishesManagementViewModel

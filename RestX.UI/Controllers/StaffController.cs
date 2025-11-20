@@ -9,18 +9,12 @@ namespace RestX.UI.Controllers
     public class StaffController : Controller
     {
         private readonly IStaffService _tableService;
-        private readonly IStaffUIService _staffUIService;
-        private readonly ILogger<StaffController> _logger;
 
-        public StaffController(IStaffService tableService, IStaffUIService staffUIService,
-            ILogger<StaffController> logger)
+        public StaffController(IStaffService tableService)
         {
             _tableService = tableService;
-            _staffUIService = staffUIService;
-            _logger = logger;
         }
 
-        // === EXISTING STAFF FUNCTIONS ===
         [HttpGet]
         public async Task<IActionResult> StatusTable()
         {
@@ -28,7 +22,6 @@ namespace RestX.UI.Controllers
             Console.WriteLine($"Fetched tables: {tables?.Count()}");
             return View(tables ?? new List<TableStatusViewModel>());
         }
-
         [HttpGet]
         public async Task<IActionResult> CustomerRequests()
         {
@@ -42,12 +35,12 @@ namespace RestX.UI.Controllers
             var menu = await _tableService.GetMenuAsync();
             return View(menu);
         }
-
         [HttpGet]
         public async Task<IActionResult> Profile()
         {
             try
             {
+
                 var staffProfile = await _tableService.GetStaffProfileAsync();
 
                 if (staffProfile == null)
@@ -78,6 +71,7 @@ namespace RestX.UI.Controllers
             ViewBag.Status = status;
             return View();
         }
+
         // === STAFF MANAGEMENT FUNCTIONS FOR CRUD ===
 
         /// <summary>
@@ -181,6 +175,5 @@ namespace RestX.UI.Controllers
                 return Json(new { success = false, message = "An error occurred while loading staff details" });
             }
         }
-
     }
 }

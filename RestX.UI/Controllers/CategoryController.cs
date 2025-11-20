@@ -5,7 +5,7 @@ using RestX.UI.Services.Interfaces;
 
 namespace RestX.UI.Controllers
 {
-    //[Authorize(Roles = "Owner,Staff")]
+    [Authorize(Roles = "Owner,Staff")]
     public class CategoryController : Controller
     {
         private readonly IDishManagementUIService _dishService;
@@ -76,7 +76,7 @@ namespace RestX.UI.Controllers
         /// <param name="model">Category data</param>
         /// <returns></returns>
         [HttpPost]
-        //[Authorize(Roles = "Owner")]
+        [Authorize(Roles = "Owner")]
         public async Task<IActionResult> Create(CategoryViewModel model)
         {
             try
@@ -104,7 +104,7 @@ namespace RestX.UI.Controllers
         /// <param name="model">Updated category data</param>
         /// <returns></returns>
         [HttpPost]
-        //[Authorize(Roles = "Owner")]
+        [Authorize(Roles = "Owner")]
         public async Task<IActionResult> Update(CategoryViewModel model)
         {
             try
@@ -132,7 +132,7 @@ namespace RestX.UI.Controllers
         /// <param name="categoryId">Category ID</param>
         /// <returns></returns>
         [HttpPost]
-        //[Authorize(Roles = "Owner")]
+        [Authorize(Roles = "Owner")]
         public async Task<IActionResult> Delete(int categoryId)
         {
             try
