@@ -5,8 +5,8 @@ using RestX.UI.Services.Interfaces;
 
 namespace RestX.UI.Controllers
 {
-    [Authorize(Roles = "Owner,Staff")]
-    [Route("Customer")]
+    //[Authorize(Roles = "Owner,Staff")]
+    [Route("[controller]")]
     public class CustomerController : Controller
     {
         private readonly ICustomerUIService _customerService;
@@ -27,8 +27,7 @@ namespace RestX.UI.Controllers
         /// Customer management page
         /// </summary>
         /// <returns></returns>
-        [HttpGet("")]  // Matches /Customer
-        [HttpGet("Index")]  // Matches /Customer/Index
+        [HttpGet]  // Matches /Customer
         public async Task<IActionResult> Index()
         {
             try
@@ -230,7 +229,7 @@ namespace RestX.UI.Controllers
         /// <param name="customerId">Customer ID</param>
         /// <returns></returns>
         [HttpDelete("Delete/{customerId:guid}")]  // Matches /Customer/Delete/{guid}
-        [Authorize(Roles = "Owner")]
+        //[Authorize(Roles = "Owner")]
         public async Task<IActionResult> DeleteCustomer(Guid customerId)
         {
             try

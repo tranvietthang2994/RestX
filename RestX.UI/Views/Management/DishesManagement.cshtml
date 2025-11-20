@@ -225,7 +225,7 @@
                         <div class="col-md-6 mb-3">
                             <label for="imageFile" class="owner-form-label">
                                 <i class="bi bi-image me-1"></i>
-                                Dish Image *
+                                Dish Image (Optional)
                             </label>
                             <div class="image-upload-container">
                                 <div class="image-preview" id="imagePreview" style="display: none;">
@@ -236,7 +236,7 @@
                                     </button>
                                 </div>
                                 <div class="file-upload-area" id="fileUploadArea" style="border: 2px dashed var(--owner-border); border-radius: var(--owner-radius-small); padding: 2rem; text-align: center; cursor: pointer; transition: all 0.3s ease;">
-                                    <input type="file" class="owner-form-control" id="imageFile" name="ImageFile" accept="image/*" required style="display: none;" onchange="handleImageUpload(this)">
+                                    <input type="file" class="owner-form-control" id="imageFile" name="ImageFile" accept="image/*" style="display: none;" onchange="handleImageUpload(this)">
                                     <div class="upload-placeholder" onclick="document.getElementById('imageFile').click()">
                                         <i class="bi bi-cloud-upload" style="font-size: 2rem; color: var(--owner-primary);"></i>
                                         <p class="mt-2 mb-1 fw-bold">Click to upload dish image</p>
@@ -313,11 +313,17 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         let categories = [];
-        let currentOwnerName = '@User.Identity.Name';
+        let currentOwnerName = '@(User.Identity?.Name ?? "")';
         let allDishes = [];
 
         document.addEventListener('DOMContentLoaded', async function () {
             await loadCategories();
+
+            // ✅ Thêm debug call
+            setTimeout(() => {
+                debugCategoryData();
+            }, 1000);
+
             bindFormEvents();
             bindCategoryFormEvents();
             bindSortEvents();
@@ -455,14 +461,14 @@
             categories.forEach(category => {
                 const option = document.createElement('option');
                 option.value = category.id;
-                option.textContent = category.name;
+                option.textContent = category.categoryName;
                 categorySelect.appendChild(option);
             });
         }
 
         async function loadCategories() {
             try {
-                const response = await fetch('/Category/Index');
+                const response = await fetch('/Category/GetCategories');
                 const result = await response.json();
                 if (result.success) {
                     categories = result.data;
@@ -493,7 +499,7 @@
             }, 500);
         }
 
-        async function saveCategory() {
+                async function saveCategory() {
             const categoryName = document.getElementById('categoryNameInput').value.trim();
             const errorDiv = document.getElementById('categoryError');
             const input = document.getElementById('categoryNameInput');
@@ -506,7 +512,8 @@
                 return;
             }
 
-            if (categories.some(c => c.name.toLowerCase() === categoryName.toLowerCase())) {
+            // ✅ Sửa để kiểm tra đúng thuộc tính categoryName
+            if (categories.some(c => c.categoryName.toLowerCase() === categoryName.toLowerCase())) {
                 showCategoryError('Category already exists!');
                 return;
             }
@@ -528,6 +535,7 @@
 
                     Swal.fire('Success', 'Category added successfully!', 'success');
 
+                    // ✅ Tìm option mới được tạo và select nó
                     const categorySelect = document.getElementById('categorySelect');
                     const newOption = Array.from(categorySelect.options).find(option =>
                         option.textContent.toLowerCase() === categoryName.toLowerCase()
@@ -540,6 +548,7 @@
                     showCategoryError(result.message || 'Cannot add category');
                 }
             } catch (error) {
+                console.error('Error creating category:', error);
                 showCategoryError('An error occurred while adding category');
             }
         }
@@ -561,28 +570,59 @@
             if (categorySelect.value) {
                 const selectedCategory = categories.find(c => c.id == categorySelect.value);
                 if (selectedCategory) {
-                    categoryNameInput.value = selectedCategory.name;
+                    // ✅ Fallback cho cả hai thuộc tính có thể có
+                    const categoryName = selectedCategory.categoryName || selectedCategory.name || '';
+                    categoryNameInput.value = categoryName;
+                    console.log('Selected category:', selectedCategory, 'Display name:', categoryName);
                 }
             } else {
                 categoryNameInput.value = '';
             }
         }
 
-        async function handleImageUpload(input) {
+                async function handleImageUpload(input) {
+            console.log('📸 Image upload triggered');
+
             const file = input.files[0];
-            if (!file) return;
+            if (!file) {
+                console.log('❌ No file selected');
+                return;
+            }
+
+            console.log('📁 File selected:', {
+                name: file.name,
+                size: file.size,
+                type: file.type
+            });
 
             if (file.size > 5 * 1024 * 1024) {
+                console.log('❌ File too large:', file.size);
                 Swal.fire('Error', 'Image size cannot exceed 5MB!', 'error');
                 input.value = '';
                 return;
             }
 
+            // Check file type
+            if (!file.type.startsWith('image/')) {
+                console.log('❌ Invalid file type:', file.type);
+                Swal.fire('Error', 'Please select a valid image file!', 'error');
+                input.value = '';
+                return;
+            }
+
+            console.log('✅ File validation passed, reading file...');
+
             const reader = new FileReader();
             reader.onload = function (e) {
+                console.log('📖 File read successfully');
                 document.getElementById('imagePreview').style.display = 'block';
                 document.getElementById('previewImg').src = e.target.result;
                 document.getElementById('fileUploadArea').style.display = 'none';
+            };
+            reader.onerror = function(e) {
+                console.error('💥 Error reading file:', e);
+                Swal.fire('Error', 'Error reading image file!', 'error');
+                input.value = '';
             };
             reader.readAsDataURL(file);
         }
@@ -595,21 +635,64 @@
         }
 
         function bindFormEvents() {
-            document.getElementById('dishForm').onsubmit = async function (e) {
+            console.log('🔗 Binding form events...');
+
+            const dishForm = document.getElementById('dishForm');
+            if (!dishForm) {
+                console.error('❌ dishForm not found!');
+                return;
+            }
+
+            // Remove any existing event listeners
+            dishForm.onsubmit = null;
+
+            dishForm.addEventListener('submit', async function(e) {
+                console.log('📝 Form submit event triggered');
                 e.preventDefault();
+                e.stopPropagation();
+
+                console.log('🚫 Default prevented, calling saveDish...');
                 await saveDish();
-            };
+            });
+
+            console.log('✅ Form events bound successfully');
+        }
+
+        function debugCategoryData() {
+            console.log('Current categories array:', categories);
+            categories.forEach((cat, index) => {
+                console.log(`Category ${index}:`, {
+                    id: cat.id,
+                    name: cat.name,
+                    categoryName: cat.categoryName,
+                    isActive: cat.isActive,
+                    allProperties: Object.keys(cat)
+                });
+            });
         }
 
         function showDishModal(title, dish = null) {
+            console.log('🏠 Opening dish modal:', title);
+
             document.getElementById('dishModalLabel').innerHTML = `<i class="bi bi-plus-circle me-2" style="color: var(--owner-primary);"></i> ${title}`;
+
             resetDishForm();
             if (dish) fillDishForm(dish);
+
             const dishModal = new bootstrap.Modal(document.getElementById('dishModal'));
+
+            // Bind events after modal is shown
+            dishModal._element.addEventListener('shown.bs.modal', function() {
+                console.log('📱 Modal shown, rebinding events...');
+                bindFormEvents();
+            });
+
             dishModal.show();
         }
 
-        function resetDishForm() {
+                function resetDishForm() {
+            console.log('🔄 Resetting dish form...');
+
             document.getElementById('dishId').value = 0;
             document.getElementById('dishName').value = '';
             document.getElementById('categorySelect').value = '';
@@ -618,12 +701,19 @@
             document.getElementById('price').value = '';
             document.getElementById('isActive').checked = true;
 
+            // ✅ Không set required cho image input
             const imageFileInput = document.getElementById('imageFile');
-            imageFileInput.setAttribute('required', 'required');
+            if (imageFileInput) {
+                imageFileInput.value = '';
+                imageFileInput.removeAttribute('required'); // Bỏ required
+            }
+
             removeImage();
+
+            console.log('✅ Form reset complete');
         }
 
-        function fillDishForm(dish) {
+                function fillDishForm(dish) {
             document.getElementById('dishId').value = dish.id;
             document.getElementById('dishName').value = dish.name;
             document.getElementById('categorySelect').value = dish.categoryId;
@@ -633,18 +723,21 @@
             document.getElementById('isActive').checked = dish.isActive;
 
             const imageFileInput = document.getElementById('imageFile');
-            if (dish.imageUrl) {
+            if (dish.imageUrl && dish.imageUrl.trim() !== '') {
                 document.getElementById('imagePreview').style.display = 'block';
                 document.getElementById('previewImg').src = dish.imageUrl;
                 document.getElementById('fileUploadArea').style.display = 'none';
-                imageFileInput.removeAttribute('required');
             } else {
                 removeImage();
-                imageFileInput.setAttribute('required', 'required');
             }
+
+            // ✅ Luôn không require image khi edit
+            imageFileInput.removeAttribute('required');
         }
 
-        async function saveDish() {
+         async function saveDish() {
+            console.log('🚀 saveDish() called');
+
             const id = parseInt(document.getElementById('dishId').value);
             const name = document.getElementById('dishName').value.trim();
             const categoryId = document.getElementById('categorySelect').value;
@@ -653,15 +746,26 @@
             const isActive = document.getElementById('isActive').checked;
             const imageFile = document.getElementById('imageFile').files[0];
 
+            console.log('📋 Form data collected:', {
+                id, name, categoryId, description, price, isActive,
+                hasImageFile: !!imageFile
+            });
+
+            // Validation - Bỏ validation bắt buộc phải có image
             if (!name || !categoryId || !price) {
+                console.log('❌ Validation failed: missing required fields');
                 Swal.fire('Error', 'Please fill in all required fields!', 'error');
                 return;
             }
 
-            if (id === 0 && !imageFile) {
-                Swal.fire('Error', 'Please select a dish image!', 'error');
-                return;
-            }
+            // ✅ Bỏ validation bắt buộc image cho dish mới
+            // if (id === 0 && !imageFile) {
+            //     console.log('❌ Validation failed: missing image for new dish');
+            //     Swal.fire('Error', 'Please select a dish image!', 'error');
+            //     return;
+            // }
+
+            console.log('✅ Validation passed, creating FormData...');
 
             const formData = new FormData();
 
@@ -675,31 +779,81 @@
             formData.append('Price', price);
             formData.append('IsActive', isActive);
 
+            // ✅ Chỉ append ImageFile nếu có file được chọn
             if (imageFile) {
                 formData.append('ImageFile', imageFile);
             }
 
+            // Debug FormData content
+            console.log('📦 FormData contents:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`  ${key}:`, value);
+            }
+
             const url = '/Dish/Upsert';
+            console.log('🌐 Making request to:', url);
 
             try {
+                const saveBtn = document.getElementById('btnSaveDish');
+                const originalText = saveBtn.innerHTML;
+                saveBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+                saveBtn.disabled = true;
+
                 const response = await fetch(url, {
                     method: 'POST',
                     body: formData
                 });
 
+                console.log('📡 Response received:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    ok: response.ok
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const contentType = response.headers.get('content-type');
+                console.log('📄 Response content-type:', contentType);
+
+                if (!contentType || !contentType.includes('application/json')) {
+                    const responseText = await response.text();
+                    console.log('⚠️ Non-JSON response:', responseText);
+                    throw new Error('Server returned non-JSON response: ' + responseText.substring(0, 100));
+                }
+
                 const result = await response.json();
+                console.log('🔍 Parsed result:', result);
+
+                // Restore button
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
 
                 if (result.success) {
-                    Swal.fire('Success', result.message, 'success').then(() => location.reload());
+                    console.log('✅ Success! Message:', result.message);
+                    Swal.fire('Success', result.message, 'success').then(() => {
+                        console.log('🔄 Reloading page...');
+                        location.reload();
+                    });
                 } else {
+                    console.log('❌ Server returned failure:', result);
                     const errorMessage = result.errors
                         ? (Array.isArray(result.errors) ? result.errors.join('\n') : result.errors)
                         : result.message || 'Cannot save dish!';
+                    console.log('💥 Error message:', errorMessage);
                     Swal.fire('Error', errorMessage, 'error');
                 }
             } catch (error) {
-                console.error('Error saving dish:', error);
-                Swal.fire('Error', 'An error occurred while saving dish!', 'error');
+                console.error('💥 Catch block - Error saving dish:', error);
+
+                const saveBtn = document.getElementById('btnSaveDish');
+                if (saveBtn) {
+                    saveBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save Dish';
+                    saveBtn.disabled = false;
+                }
+
+                Swal.fire('Error', 'An error occurred while saving dish: ' + error.message, 'error');
             }
         }
 

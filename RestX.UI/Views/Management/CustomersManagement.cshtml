@@ -273,7 +273,7 @@
 
         async function viewCustomer(id) {
             try {
-                const response = await fetch(`/Customer/Details/${id}`);
+                const response = await fetch(`/Customer/Get/${id}`);
                 const result = await response.json();
                 if (result.success) {
                     const customer = result.data;
@@ -304,7 +304,7 @@
 
         async function editCustomer(id) {
             try {
-                const response = await fetch(`/Customer/Details/${id}`);
+                const response = await fetch(`/Customer/Get/${id}`);
                 const result = await response.json();
                 if (result.success) {
                     showCustomerModal('Edit Customer', result.data);

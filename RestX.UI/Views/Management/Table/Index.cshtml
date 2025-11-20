@@ -4,6 +4,7 @@
     ViewData["Title"] = "Tables Management";
     Layout = "~/Views/Shared/_OwnerLayout.cshtml";
     var tableStatuses = ViewBag.TableStatuses as List<RestX.UI.Models.ViewModels.TableStatusViewModel>;
+
 }
 
 <style>
@@ -42,6 +43,21 @@
         padding: 0.75rem 1.1rem;
     }
 </style>
+
+@* <div class="alert alert-info">
+    <strong>Debug Info:</strong>
+    <br>Model.Tables count: @(Model?.Tables?.Count ?? 0)
+    <br>TableStatuses count: @(tableStatuses?.Count ?? 0)
+    @if (Model?.Tables != null)
+    {
+        foreach (var table in Model.Tables)
+        {
+            <div>
+            Table @table.TableNumber - Status: @table.Status
+            </div>
+        }
+    }
+</div> *@
 
 <div class="owner-fade-in">
     <div class="owner-page-header d-flex align-items-center justify-content-between mb-4">
@@ -119,19 +135,19 @@
                         </label>
                         <select class="form-select form-select-lg" id="addTableStatus" name="TableStatusId">
                             @if (tableStatuses != null)
-                            {
-                                foreach (var status in tableStatuses)
-                                {
-                                    if (status.TableStatus.Equals("Available"))
-                                    {
-                                        <option value="@status.Id" selected>@status.TableStatus</option>
-                                    }
-                                    else
-                                    {
-                                        <option value="@status.Id">@status.TableStatus</option>
-                                    }
-                                }
-                            }
+{
+    foreach (var status in tableStatuses)
+    {
+        if (status.TableStatus != null && status.TableStatus.Name?.Equals("Available") == true)
+        {
+            <option value="@status.Id" selected>@status.TableStatus.Name</option>
+        }
+        else
+        {
+            <option value="@status.Id">@status.TableStatus?.Name</option>
+        }
+    }
+}
                         </select>
                     </div>
                     <div class="mb-4 d-flex align-items-center gap-3">
@@ -182,7 +198,7 @@
                             {
                                 foreach (var status in tableStatuses)
                                 {
-                                    <option value="@status.Id">@status.TableStatus</option>
+                                    <option value="@status.Id">@status.TableStatus?.Name</option>
                                 }
                             }
                         </select>
