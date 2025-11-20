@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication.Cookies;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using QRCoder;
@@ -54,7 +55,7 @@ builder.Services.AddScoped<QRCodeGenerator>();
 builder.Services.AddScoped<IAiService, AiService>();
 builder.Services.AddHttpClient<IAiService, AiService>();
 
-builder.Services.AddAutoMapper(typeof(Program));
+
 builder.Services.AddDbContext<RestXRestaurantManagementContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("RestX"),
@@ -87,7 +88,14 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     options.ExpireTimeSpan = TimeSpan.FromDays(1);
 });
 
-builder.Services.AddAutoMapper(typeof(Program));
+var mapperConfig = new MapperConfiguration(cfg =>
+{
+    cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies());
+});
+
+IMapper mapper = mapperConfig.CreateMapper();
+builder.Services.AddSingleton(mapper);
+
 
 // File upload configuration
 builder.Services.Configure<FormOptions>(options =>
