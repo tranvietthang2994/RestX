@@ -368,6 +368,7 @@ builder.Services.AddScoped<QRCodeGenerator>();
 builder.Services.AddScoped<IAiService, AiService>();
 builder.Services.AddHttpClient<IAiService, AiService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
 // Database
 builder.Services.AddDbContext<RestXRestaurantManagementContext>(options =>
@@ -424,7 +425,7 @@ app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "RestX API v1 (No Auth)");
-    c.RoutePrefix = string.Empty;
+    //c.RoutePrefix = string.Empty;
 });
 
 // Error Handling

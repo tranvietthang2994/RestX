@@ -33,81 +33,82 @@ namespace RestX.UI.Controllers
             {
                 _logger.LogInformation("Loading tables management page");
 
-                // ✅ Tạo test data để đảm bảo có data hiển thị
-                var testResponse = new TableListViewModel
+                TableListViewModel response = new TableListViewModel
                 {
-                    Tables = new List<TableApiModel>
-            {
-                new()
-                {
-                    Id = 1,
-                    TableNumber = 1,
-                    Status = "Available",
-                    IsActive = true,
-                    OwnerId = Guid.NewGuid(),
-                    TableStatusId = 1,
-                    QrCodeUrl = "https://example.com/qr1"
-                },
-                new()
-                {
-                    Id = 2,
-                    TableNumber = 2,
-                    Status = "Occupied",
-                    IsActive = true,
-                    OwnerId = Guid.NewGuid(),
-                    TableStatusId = 2,
-                    QrCodeUrl = "https://example.com/qr2"
-                },
-                new()
-                {
-                    Id = 3,
-                    TableNumber = 3,
-                    Status = "Reserved",
-                    IsActive = true,
-                    OwnerId = Guid.NewGuid(),
-                    TableStatusId = 3,
-                    QrCodeUrl = "https://example.com/qr3"
-                }
-            }
+                    Tables = new List<TableApiModel>()
                 };
 
-                _logger.LogInformation("Created test data with {Count} tables", testResponse.Tables.Count);
-
-                // ✅ Sử dụng test data trước, comment out phần API call
-                TableListViewModel response = testResponse;
-
-
-                // TODO: Uncomment này khi muốn test với real API
-                var responseString = await _apiService.GetStringAsync("api/Table");
+                // Get data from API
+                var responseString = await _apiService.GetStringAsync("api/Table/owner");
                 _logger.LogInformation("API Response: {Response}", responseString);
 
                 if (!string.IsNullOrEmpty(responseString))
                 {
                     try
                     {
-                        var apiResponse = JsonSerializer.Deserialize<TableListViewModel>(responseString, new JsonSerializerOptions
+                        // Parse the API response which has structure: { "success": true, "data": [...] }
+                        var apiResponseWrapper = JsonSerializer.Deserialize<ApiResponse<JsonElement[]>>(responseString, new JsonSerializerOptions
                         {
                             PropertyNameCaseInsensitive = true
                         });
 
-                        if (apiResponse?.Tables?.Any() == true)
+                        if (apiResponseWrapper?.Success == true && apiResponseWrapper.Data != null)
                         {
-                            response = apiResponse;
-                            _logger.LogInformation("Using API data with {Count} tables", response.Tables.Count);
+                            // Convert the data array to TableApiModel list
+                            var tables = new List<TableApiModel>();
+
+                            foreach (var tableElement in apiResponseWrapper.Data)
+                            {
+                                var table = new TableApiModel
+                                {
+                                    Id = tableElement.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : 0,
+                                    TableNumber = tableElement.TryGetProperty("tableNumber", out var numProp) ? numProp.GetInt32() : 0,
+                                    TableStatusId = tableElement.TryGetProperty("tableStatusId", out var statusIdProp) ? statusIdProp.GetInt32() : 0,
+                                    OwnerId = tableElement.TryGetProperty("ownerId", out var ownerProp) &&
+                                             Guid.TryParse(ownerProp.GetString(), out var ownerId) ? ownerId : Guid.Empty,
+                                    IsActive = tableElement.TryGetProperty("isActive", out var activeProp) && activeProp.GetBoolean(),
+                                    QrCodeUrl = tableElement.TryGetProperty("qrcode", out var qrProp) ? qrProp.GetString() : "",
+                                    CreatedDate = tableElement.TryGetProperty("createdDate", out var createdProp) &&
+                                                 DateTime.TryParse(createdProp.GetString(), out var created) ? created : null,
+                                    ModifiedDate = tableElement.TryGetProperty("modifiedDate", out var modifiedProp) &&
+                                                  DateTime.TryParse(modifiedProp.GetString(), out var modified) ? modified : null,
+                                    // Map status based on tableStatusId
+                                    Status = GetStatusNameFromId(tableElement.TryGetProperty("tableStatusId", out var sIdProp) ? sIdProp.GetInt32() : 1)
+                                };
+                                tables.Add(table);
+                            }
+
+                            if (tables.Any())
+                            {
+                                response = new TableListViewModel
+                                {
+                                    Tables = tables,
+                                    TotalTables = tables.Count,
+                                    AvailableTables = tables.Count(t => t.TableStatusId == 1),
+                                    OccupiedTables = tables.Count(t => t.TableStatusId == 2),
+                                    Success = true
+                                };
+                                _logger.LogInformation("Using API data with {Count} tables", response.Tables.Count);
+                            }
+                            else
+                            {
+                                _logger.LogWarning("API returned empty tables");
+                            }
                         }
                         else
                         {
-                            _logger.LogWarning("API returned empty tables, using test data");
-                            response = testResponse;
+                            _logger.LogWarning("API response unsuccessful or no data");
                         }
                     }
                     catch (JsonException ex)
                     {
-                        _logger.LogError(ex, "Failed to deserialize API response, using test data");
-                        response = testResponse;
+                        _logger.LogError(ex, "Failed to deserialize API response");
                     }
                 }
-               
+                else
+                {
+                    _logger.LogWarning("API returned empty response");
+                }
 
                 // Set ViewBag cho table statuses
                 ViewBag.TableStatuses = await GetTableStatusesAsync();
@@ -128,45 +129,16 @@ namespace RestX.UI.Controllers
             }
         }
 
-        /// <summary>
-        /// Table QR code display page
-        /// </summary>
-        /// <returns></returns>
-        [HttpGet("createqr")]
-        public async Task<IActionResult> TableQrCode()
+        private string GetStatusNameFromId(int statusId)
         {
-            try
+            return statusId switch
             {
-                _logger.LogInformation("Loading table QR code page");
-
-                var response = await _apiService.GetAsync<TableListViewModel>("api/table/qr-codes");
-
-                if (response?.Tables == null)
-                {
-                    return View("Error", new ErrorViewModel
-                    {
-                        Message = "Unable to load table QR code data"
-                    });
-                }
-
-                var tableItems = response.Tables.Select(table => new RestX.UI.Models.ViewModels.TableItemViewModel
-                {
-                    TableNumber = table.TableNumber,
-                    QrCode = table.QrCodeUrl ?? "",
-                    OwnerId = table.OwnerId,
-                    TableStatusId = 1 // Default status, adjust as needed
-                }).ToList();
-
-                return View("~/Views/Management/Table/TableQrCode.cshtml", tableItems);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading table QR code page");
-                return View("Error", new ErrorViewModel
-                {
-                    Message = "An error occurred while loading table QR codes"
-                });
-            }
+                1 => "Available",
+                2 => "Occupied",
+                3 => "Reserved",
+                4 => "Maintenance",
+                _ => "Available"
+            };
         }
 
         // ===== CRUD METHODS SỬ DỤNG IApiService =====
@@ -177,7 +149,7 @@ namespace RestX.UI.Controllers
         /// <param name="model">Table data từ form</param>
         /// <returns></returns>
         [HttpPost("Upsert")]
-        [Authorize(Roles = "Owner")]
+        //[Authorize(Roles = "Owner")]
         public async Task<IActionResult> UpsertTable([FromForm] TableUpsertModel model)
         {
             try
@@ -271,7 +243,7 @@ namespace RestX.UI.Controllers
         /// <param name="id">Table ID</param>
         /// <returns></returns>
         [HttpDelete("Delete/{id:int}")]
-        [Authorize(Roles = "Owner")]
+        //[Authorize(Roles = "Owner")]
         public async Task<IActionResult> DeleteTable(int id)
         {
             try
