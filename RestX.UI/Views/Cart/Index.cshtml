@@ -128,9 +128,14 @@
 
 <div class="order-card">
     <div class="order-header">
-        <a asp-controller="Menu" asp-action="Index" asp-route-ownerId="@Model.OwnerId" asp-route-tableId="@Model.TableId"><</a>
+        <form asp-controller="Menu" asp-action="Index" asp-route-ownerId="@Model.OwnerId" asp-route-tableId="@Model.TableId" method="post" style="margin: 0;">
+            <input type="hidden" name="DishListJson" value="@Model.DishListJson" />
+            <button type="submit" style="background: none; border: none; font-size: 1em; cursor: pointer; padding: 0;"><</button>
+        </form>
         <h3 class="m-0">Các món đang chọn</h3>
-        <button>Xóa giỏ</button>
+        <form asp-controller="Cart" asp-action="ClearCartAndRedirect" asp-route-ownerId="@Model.OwnerId" asp-route-tableId="@Model.TableId" method="post" style="margin: 0;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa toàn bộ giỏ hàng?');">
+            <button type="submit" style="background: none; border: none; color: #f44336; font-weight: bold; cursor: pointer;">Xóa giỏ</button>
+        </form>
     </div>
     @foreach(var dish in Model.DishList)
     {
@@ -185,14 +190,6 @@
             deleteBtn.parentElement.remove();
             updatePrice();
         });
-    });
-
-    orderHeader.children[2].addEventListener("click", () => {
-        Array.from(itemRow).forEach(dish => {
-            dish.remove();
-        });
-        updatePrice();
-        disableConfirmBtn()
     });
 
     Array.from(editLink).forEach((edit) => {
