@@ -54,7 +54,7 @@ namespace RestX.UI.Services.Implementations
         {
             try
             {
-                var response = await _apiService.GetAsync<ApiResponse<StaffApiModel>>($"api/staff/{staffId}");
+                var response = await _apiService.GetAsync<ApiResponse<StaffApiModel>>($"api/staff/management/{staffId}");
                 
                 if (response?.Success == true && response.Data != null)
                 {
@@ -126,7 +126,7 @@ namespace RestX.UI.Services.Implementations
                     NewPassword = model.NewPassword
                 };
 
-                var response = await _apiService.PutAsync<object, ApiResponse>($"api/staff/{model.Id}", updateData);
+                var response = await _apiService.PutAsync<object, ApiResponse>($"api/staff/management/{model.Id}", updateData);
                 
                 if (response?.Success == true)
                 {
@@ -167,7 +167,7 @@ namespace RestX.UI.Services.Implementations
                     IsActive = model.IsActive ?? true
                 };
 
-                var response = await _apiService.PostAsync<object, ApiResponse>("api/staff", createData);
+                var response = await _apiService.PostAsync<object, ApiResponse>("api/staff/management", createData);
                 
                 if (response?.Success == true)
                 {
@@ -218,7 +218,7 @@ namespace RestX.UI.Services.Implementations
         {
             try
             {
-                var success = await _apiService.DeleteAsync($"api/staff/{staffId}");
+                var success = await _apiService.DeleteAsync($"api/staff/management/{staffId}");
                 
                 if (!success)
                 {
