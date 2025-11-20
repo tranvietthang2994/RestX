@@ -232,7 +232,14 @@ namespace RestX.UI.Services.Implementations
 
         public async Task<CartViewModel> JsonToDishList(CartViewModel cart)
         {
-            cart.DishList = JsonSerializer.Deserialize<List<DishCartViewModel>>(cart.DishListJson);
+            if (!string.IsNullOrEmpty(cart.DishListJson))
+            {
+                cart.DishList = JsonSerializer.Deserialize<List<DishCartViewModel>>(cart.DishListJson) ?? new List<DishCartViewModel>();
+            }
+            else
+            {
+                cart.DishList = new List<DishCartViewModel>();
+            }
             return cart;
         }
 
