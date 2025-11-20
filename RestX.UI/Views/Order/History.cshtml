@@ -94,16 +94,7 @@
                     @foreach (var dish in cart.DishList)
                     {
                         <div class="item-row" dish-id="@dish.DishId">
-                            @if (!string.IsNullOrEmpty(dish.ImgUrl))
-                            {
-                                <img src="@dish.ImgUrl" class="item-image" alt="@dish.DishName" />
-                            }
-                            else
-                            {
-                                <div class="item-image" style="display: flex; align-items: center; justify-content: center; background-color: #f0f0f0; color: #999;">
-                                    🍽️
-                                </div>
-                            }
+                            <img src="@(Url.Content(dish.ImgUrl))" class="item-image" />
                             <div class="item-info">
                                 <p dish-name="@dish.DishName">@dish.Quantity × @dish.DishName</p>
                                 <p dish-price="@dish.Price">@((dish.Price * dish.Quantity).ToString("N0")) đ</p>
