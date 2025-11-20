@@ -416,7 +416,7 @@ app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "RestX API v1 (No Auth)");
-    c.RoutePrefix = string.Empty;
+    //c.RoutePrefix = string.Empty;
 });
 
 // Error Handling
