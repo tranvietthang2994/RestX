@@ -497,11 +497,15 @@ window.StaffPageManager = (function () {
                             ? `<button class="btn-action btn-edit" onclick="editOrderDetails('${order.id}')"><i class="ti ti-edit"></i> Edit Items</button>`
                             : ""
                         }
-                        ${order.orderStatusId < 4
-                            ? `<button class="btn-action btn-confirm" onclick="confirmOrder('${order.id}', ${order.orderStatusId})" data-order-id="${order.id}" data-current-status="${order.orderStatusId}">
-                                <i class="ti ti-arrow-right"></i> ${getNextStatusButtonText(order.orderStatusId)}
+                        ${order.orderStatusId === 4 && !order.isPaid
+                            ? `<button class="btn-action btn-checkout" onclick="showCheckoutModal('${order.id}', ${Math.round(order.totalAmount)})" data-order-id="${order.id}" data-order-status="${order.orderStatusId}" data-is-paid="${order.isPaid}">
+                                <i class="ti ti-cash"></i> Checkout
                                </button>`
-                            : ""
+                            : order.orderStatusId < 4
+                                ? `<button class="btn-action btn-confirm" onclick="confirmOrder('${order.id}', ${order.orderStatusId})" data-order-id="${order.id}" data-current-status="${order.orderStatusId}">
+                                    <i class="ti ti-arrow-right"></i> ${getNextStatusButtonText(order.orderStatusId)}
+                                   </button>`
+                                : ""
                         }
                     </div>
                 </div>`;
@@ -817,10 +821,115 @@ window.StaffPageManager = (function () {
             }
         };
 
+        // Payment checkout functionality
+        let currentPaymentData = null;
+        let paymentCheckInterval = null;
+
+        window.showCheckoutModal = async function(orderId, amount) {
+            console.log("showCheckoutModal called with orderId:", orderId, "amount:", amount);
+
+            try {
+                console.log("Calling payment API...");
+
+                // Call API to create payment link
+                const response = await fetch("https://localhost:7294/api/Payment/create", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        orderId: orderId,
+                        description: `Payment for order`
+                    })
+                });
+
+                console.log("Payment API response status:", response.status);
+                const result = await response.json();
+                console.log("Payment API result:", result);
+
+                if (response.ok && result.success) {
+                    currentPaymentData = result.data;
+
+                    // Redirect to PayOS checkout page
+                    console.log("Redirecting to PayOS checkout URL:", result.data.checkoutUrl);
+                    window.open(result.data.checkoutUrl, '_blank');
+
+                    // Start polling payment status in background
+                    startPaymentStatusPolling(result.data.orderCode, orderId);
+                } else {
+                    console.error("Payment creation failed:", result);
+                    alert(`❌ Failed to generate payment: ${result.message || "Please try again."}`);
+                }
+            } catch (error) {
+                console.error("Error creating payment:", error);
+                alert(`❌ An error occurred: ${error.message}`);
+            }
+        };
+
+        function startPaymentStatusPolling(orderCode, orderId) {
+            // Clear any existing interval
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+            }
+
+            // Check payment status every 3 seconds
+            paymentCheckInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`https://localhost:7294/api/Payment/${orderCode}`);
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        const paymentStatus = result.data.status;
+
+                        if (paymentStatus === "PAID" || paymentStatus === "COMPLETED") {
+                            // Payment successful!
+                            clearInterval(paymentCheckInterval);
+                            await handlePaymentSuccess(orderId);
+                        } else if (paymentStatus === "CANCELLED" || paymentStatus === "EXPIRED") {
+                            clearInterval(paymentCheckInterval);
+                            document.getElementById("paymentInfo").innerHTML = '<p style="color: #e74c3c; font-size: 1.2em;">❌ Payment cancelled or expired</p>';
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error checking payment status:", error);
+                }
+            }, 3000); // Check every 3 seconds
+        }
+
+        async function handlePaymentSuccess(orderId) {
+            // Clear the polling interval
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+                paymentCheckInterval = null;
+            }
+
+            // Show success notification
+            alert('✅ Payment completed successfully! The page will refresh to update the order list.');
+
+            // Reload to fetch updated order list (now marked as PAID)
+            location.reload();
+        }
+
+        window.closePaymentModal = function() {
+            const modal = document.getElementById("paymentQRModal");
+            if (modal) {
+                modal.style.display = "none";
+            }
+
+            // Clear payment check interval
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+                paymentCheckInterval = null;
+            }
+
+            currentPaymentData = null;
+        };
+
         // Modal click outside handler
         const modalClickHandler = function (event) {
-            const modal = document.getElementById("orderDetailsModal");
-            if (event.target === modal) {
+            const orderModal = document.getElementById("orderDetailsModal");
+
+            if (event.target === orderModal) {
                 window.closeModal();
             }
         };
@@ -830,6 +939,13 @@ window.StaffPageManager = (function () {
         return function () {
             console.log("Cleaning up CustomerRequest page");
             window.removeEventListener("click", modalClickHandler);
+
+            // Clear payment polling interval if active
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+                paymentCheckInterval = null;
+            }
+
             // Clean up global functions
             delete window.showOrderDetails;
             delete window.editOrderDetails;
@@ -837,6 +953,8 @@ window.StaffPageManager = (function () {
             delete window.saveOrderDetailsChanges;
             delete window.closeModal;
             delete window.confirmOrder;
+            delete window.showCheckoutModal;
+            delete window.closePaymentModal;
         };
     }
 
