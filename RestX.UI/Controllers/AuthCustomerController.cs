@@ -77,7 +77,21 @@ namespace RestX.UI.Controllers
                     _logger.LogInformation("Customer login successful: {CustomerName}", model.Name);
                     _logger.LogInformation("Session CustomerId: {CustomerId}", HttpContext.Session.GetString("CustomerId"));
 
-                    // Redirect back to home/menu
+                    // Check if there's a pending checkout (user was trying to checkout before login)
+                    if (TempData.ContainsKey("PendingCheckout"))
+                    {
+                        var pendingCheckout = TempData["PendingCheckout"]?.ToString();
+                        if (!string.IsNullOrEmpty(pendingCheckout))
+                        {
+                            // Restore cart and redirect back to Cart page
+                            TempData["tempModel"] = pendingCheckout;
+                            TempData["Message"] = $"Welcome, {response.User.Name}! Please confirm your order.";
+                            _logger.LogInformation("Redirecting to Cart with pending checkout for customer: {CustomerName}", model.Name);
+                            return RedirectToAction("Index", "Cart", new { ownerId, tableId });
+                        }
+                    }
+
+                    // Regular login flow - redirect back to home/menu
                     TempData["Message"] = $"Welcome, {response.User.Name}!";
                     var redirectUrl = model.ReturnUrl;
                     if (!string.IsNullOrEmpty(redirectUrl) && Url.IsLocalUrl(redirectUrl))
@@ -102,18 +116,20 @@ namespace RestX.UI.Controllers
         }
 
         /// <summary>
-        /// Customer logout
+        /// Customer logout (GET)
         /// </summary>
+        /// <param name="ownerId">Owner ID (optional)</param>
+        /// <param name="tableId">Table ID (optional)</param>
         /// <returns></returns>
-        [HttpPost]
-        public async Task<IActionResult> Logout()
+        [HttpGet]
+        public async Task<IActionResult> Logout(Guid? ownerId = null, int? tableId = null)
         {
             try
             {
                 var customerName = HttpContext.Session.GetString("CustomerName");
                 var ownerIdString = HttpContext.Session.GetString("OwnerId");
                 var tableIdString = HttpContext.Session.GetString("TableId");
-                
+
                 // Clear local session
                 HttpContext.Session.Remove("CustomerId");
                 HttpContext.Session.Remove("CustomerName");
@@ -122,8 +138,50 @@ namespace RestX.UI.Controllers
                 _logger.LogInformation("Customer logout: {CustomerName}", customerName);
 
                 TempData["Message"] = "You have been logged out successfully.";
-                
-                if (Guid.TryParse(ownerIdString, out var ownerId) && 
+
+                // Use provided ownerId/tableId or fall back to session values
+                if (ownerId.HasValue && tableId.HasValue)
+                {
+                    return RedirectToAction("Index", "Home", new { ownerId = ownerId.Value, tableId = tableId.Value });
+                }
+                else if (Guid.TryParse(ownerIdString, out var sessionOwnerId) &&
+                    int.TryParse(tableIdString, out var sessionTableId))
+                {
+                    return RedirectToAction("Index", "Home", new { ownerId = sessionOwnerId, tableId = sessionTableId });
+                }
+
+                return RedirectToAction("Index", "Home");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during customer logout");
+                return RedirectToAction("Index", "Home");
+            }
+        }
+
+        /// <summary>
+        /// Customer logout (POST) - for form submissions
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost]
+        public async Task<IActionResult> LogoutPost()
+        {
+            try
+            {
+                var customerName = HttpContext.Session.GetString("CustomerName");
+                var ownerIdString = HttpContext.Session.GetString("OwnerId");
+                var tableIdString = HttpContext.Session.GetString("TableId");
+
+                // Clear local session
+                HttpContext.Session.Remove("CustomerId");
+                HttpContext.Session.Remove("CustomerName");
+                HttpContext.Session.Remove("CustomerPhone");
+
+                _logger.LogInformation("Customer logout: {CustomerName}", customerName);
+
+                TempData["Message"] = "You have been logged out successfully.";
+
+                if (Guid.TryParse(ownerIdString, out var ownerId) &&
                     int.TryParse(tableIdString, out var tableId))
                 {
                     return RedirectToAction("Index", "Home", new { ownerId, tableId });

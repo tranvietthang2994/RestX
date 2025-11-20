@@ -128,7 +128,10 @@
 
 <div class="order-card">
     <div class="order-header">
-        <a asp-controller="Menu" asp-action="Index" asp-route-ownerId="@Model.OwnerId" asp-route-tableId="@Model.TableId"><</a>
+        <form asp-controller="Menu" asp-action="Index" asp-route-ownerId="@Model.OwnerId" asp-route-tableId="@Model.TableId" method="post" style="margin: 0;">
+            <input type="hidden" name="DishListJson" value="@Model.DishListJson" />
+            <button type="submit" style="background: none; border: none; font-size: 1em; cursor: pointer; padding: 0;"><</button>
+        </form>
         <h3 class="m-0">Các món đang chọn</h3>
         <button>Xóa giỏ</button>
     </div>

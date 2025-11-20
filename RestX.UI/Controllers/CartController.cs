@@ -301,6 +301,8 @@ namespace RestX.UI.Controllers
             var customerIdString = HttpContext.Session.GetString("CustomerId");
             if (string.IsNullOrEmpty(customerIdString))
             {
+                // Save cart to TempData before redirecting to login
+                TempData["PendingCheckout"] = System.Text.Json.JsonSerializer.Serialize(model);
                 TempData["Message"] = "Bạn hãy vui lòng đăng nhập!";
                 return RedirectToAction("Login", "AuthCustomer", new
                 {
