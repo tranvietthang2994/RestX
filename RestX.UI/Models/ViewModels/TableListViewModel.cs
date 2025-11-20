@@ -6,9 +6,6 @@ namespace RestX.UI.Models.ViewModels
         public int TotalTables { get; set; }
         public int AvailableTables { get; set; }
         public int OccupiedTables { get; set; }
-        public bool Success { get; set; }
-        public string? Message { get; set; }
-        public object? Data { get; set; }
     }
 
     public class TableApiModel
@@ -19,11 +16,7 @@ namespace RestX.UI.Models.ViewModels
         public string Status { get; set; } = string.Empty;
         public string Location { get; set; } = string.Empty;
         public bool IsActive { get; set; }
-        public Guid OwnerId { get; set; }
         public DateTime? ReservedAt { get; set; }
         public string? QrCodeUrl { get; set; }
-        public int? TableStatusId { get; set; }
-        public DateTime? CreatedDate { get; set; }
-        public DateTime? ModifiedDate { get; set; }
     }
 }

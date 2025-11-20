@@ -17,8 +17,9 @@ namespace RestX.API.Services.Implementations
             this.mapper = mapper;
         }
 
-        public async Task<List<CustomerViewModel>> GetCustomersByOwnerIdAsync(Guid ownerId)
+        public async Task<List<CustomerViewModel>> GetCustomersByOwnerIdAsync()
         {
+            var ownerId = UserHelper.GetCurrentOwnerId();
             var customers = await Repo.GetAsync<Customer>(
                 filter: c => c.OwnerId == ownerId,
                 includeProperties: ""

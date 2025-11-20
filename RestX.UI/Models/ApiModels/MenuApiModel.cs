@@ -14,15 +14,15 @@ namespace RestX.UI.Models.ApiModels
         public List<DishApiModel> Dishes { get; set; } = new();
     }
 
-    //public class TableApiModel
-    //{
-    //    public int Id { get; set; }
-    //    public string Name { get; set; } = string.Empty;
-    //    public string Status { get; set; } = string.Empty;
-    //    public string QrCode { get; set; } = string.Empty;
-    //    public bool? IsActive { get; set; }
-    //    public Guid OwnerId { get; set; }
-    //}
+    public class TableApiModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string QrCode { get; set; } = string.Empty;
+        public bool? IsActive { get; set; }
+        public Guid OwnerId { get; set; }
+    }
 
     public class CustomerApiModel
     {
