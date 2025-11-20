@@ -9,10 +9,15 @@ namespace RestX.UI.Controllers
     public class StaffController : Controller
     {
         private readonly IStaffService _tableService;
+        private readonly IStaffUIService _staffUIService;
+        private readonly ILogger<StaffController> _logger;
 
-        public StaffController(IStaffService tableService)
+        public StaffController(IStaffService tableService, IStaffUIService staffUIService,
+            ILogger<StaffController> logger)
         {
             _tableService = tableService;
+            _staffUIService = staffUIService;
+            _logger = logger;
         }
 
         [HttpGet]
