@@ -7,7 +7,7 @@ namespace RestX.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize(Roles = "Owner")] // Only Owner can access these endpoints
+    [Authorize(Roles = "Owner")] // Only Owner can access these endpoints
     public class OwnerController : ControllerBase
     {
         private readonly IDashboardService dashboardService;

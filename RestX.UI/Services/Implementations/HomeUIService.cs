@@ -18,37 +18,13 @@ namespace RestX.UI.Services.Implementations
         {
             try
             {
-                _logger.LogInformation("Getting home view model for ownerId: {OwnerId}, tableId: {TableId}", ownerId, tableId);
-                var endpoint = $"api/home/index/{ownerId}/{tableId}";
-                _logger.LogDebug("Calling API endpoint: {Endpoint}", endpoint);
-                
-                var response = await _apiService.GetAsync<ApiResponse<HomeViewModel>>(endpoint);
-                
-                if (response == null)
+                _logger.LogInformation("Getting home view model");
+                var response = await _apiService.GetAsync<ApiResponse<HomeViewModel>>($"api/home/index/{ownerId}/{tableId}");
+                if (response?.Success == true && response.Data != null)
                 {
-                    _logger.LogError("API response is null for endpoint: {Endpoint}", endpoint);
-                    return new HomeViewModel
-                    {
-                        OwnerId = ownerId,
-                        TableId = tableId,
-                        Name = string.Empty,
-                        Address = string.Empty,
-                        FileName = "Defaul",
-                        FileUrl = "/images/default.png",
-                        TableNumber = 0,
-                        ErrorMessage = "API returned null response. Please check API configuration and connectivity."
-                    };
-                }
-                
-                _logger.LogDebug("API response received. Success: {Success}, HasData: {HasData}", response.Success, response.Data != null);
-                
-                if (response.Success == true && response.Data != null)
-                {
-                    _logger.LogInformation("Successfully retrieved home view model");
                     return MapToHomeViewModel(response.Data);
                 }
-                
-                _logger.LogWarning("Failed to get home view model. Success: {Success}, Message: {Message}", response.Success, response.Message);
+                _logger.LogWarning("Failed to get home view model");
                 return new HomeViewModel
                 {
                     OwnerId = ownerId,
@@ -63,8 +39,7 @@ namespace RestX.UI.Services.Implementations
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting home view model for ownerId: {OwnerId}, tableId: {TableId}. Exception: {ExceptionMessage}, StackTrace: {StackTrace}", 
-                    ownerId, tableId, ex.Message, ex.StackTrace);
+                _logger.LogError(ex, "Error getting home view model");
                 return new HomeViewModel
                 {
                     OwnerId = ownerId,
@@ -74,8 +49,9 @@ namespace RestX.UI.Services.Implementations
                     FileName = "Defaul",
                     FileUrl = "/images/default.png",
                     TableNumber = 0,
-                    ErrorMessage = $"An error occurred while loading the home view: {ex.Message}"
-                };
+                    ErrorMessage = "An error occurred while loading the home view"
+                }
+            ;
             }
         }
 
