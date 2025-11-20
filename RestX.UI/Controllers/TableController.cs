@@ -1,11 +1,14 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RestX.UI.Models.ApiModels;
 using RestX.UI.Models.ViewModels;
 using RestX.UI.Services.Interfaces;
+using System.Text.Json;
 
 namespace RestX.UI.Controllers
 {
-    [Authorize(Roles = "Owner,Staff")]
+    //[Authorize(Roles = "Owner,Staff")]
+    [Route("Table")]
     public class TableController : Controller
     {
         private readonly IApiService _apiService;
@@ -22,44 +25,299 @@ namespace RestX.UI.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// Tables management page
-        /// </summary>
-        /// <returns></returns>
-        [HttpGet]
+        [HttpGet("")]
+        [HttpGet("Index")]
         public async Task<IActionResult> Index()
         {
             try
             {
                 _logger.LogInformation("Loading tables management page");
-                
-                var tables = await GetTablesAsync();
-                
-                var model = new TableManagementViewModel
+
+                // ✅ Tạo test data để đảm bảo có data hiển thị
+                var testResponse = new TableListViewModel
                 {
-                    Tables = tables,
-                    TotalTables = tables.Count,
-                    AvailableTables = tables.Count(t => t.Status == "Available"),
-                    OccupiedTables = tables.Count(t => t.Status == "Occupied")
+                    Tables = new List<TableApiModel>
+            {
+                new()
+                {
+                    Id = 1,
+                    TableNumber = 1,
+                    Status = "Available",
+                    IsActive = true,
+                    OwnerId = Guid.NewGuid(),
+                    TableStatusId = 1,
+                    QrCodeUrl = "https://example.com/qr1"
+                },
+                new()
+                {
+                    Id = 2,
+                    TableNumber = 2,
+                    Status = "Occupied",
+                    IsActive = true,
+                    OwnerId = Guid.NewGuid(),
+                    TableStatusId = 2,
+                    QrCodeUrl = "https://example.com/qr2"
+                },
+                new()
+                {
+                    Id = 3,
+                    TableNumber = 3,
+                    Status = "Reserved",
+                    IsActive = true,
+                    OwnerId = Guid.NewGuid(),
+                    TableStatusId = 3,
+                    QrCodeUrl = "https://example.com/qr3"
+                }
+            }
                 };
 
-                return View(model);
+                _logger.LogInformation("Created test data with {Count} tables", testResponse.Tables.Count);
+
+                // ✅ Sử dụng test data trước, comment out phần API call
+                TableListViewModel response = testResponse;
+
+
+                // TODO: Uncomment này khi muốn test với real API
+                var responseString = await _apiService.GetStringAsync("api/Table");
+                _logger.LogInformation("API Response: {Response}", responseString);
+
+                if (!string.IsNullOrEmpty(responseString))
+                {
+                    try
+                    {
+                        var apiResponse = JsonSerializer.Deserialize<TableListViewModel>(responseString, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                        if (apiResponse?.Tables?.Any() == true)
+                        {
+                            response = apiResponse;
+                            _logger.LogInformation("Using API data with {Count} tables", response.Tables.Count);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("API returned empty tables, using test data");
+                            response = testResponse;
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogError(ex, "Failed to deserialize API response, using test data");
+                        response = testResponse;
+                    }
+                }
+               
+
+                // Set ViewBag cho table statuses
+                ViewBag.TableStatuses = await GetTableStatusesAsync();
+
+                _logger.LogInformation("Final response: Tables={Count}, TableStatuses={StatusCount}",
+                    response.Tables.Count,
+                    ((List<TableStatusViewModel>)ViewBag.TableStatuses).Count);
+
+                return View("~/Views/Management/Table/Index.cshtml", response);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading tables management page");
-                return View("Error", new ErrorViewModel 
-                { 
+                return View("Error", new ErrorViewModel
+                {
                     Message = "An error occurred while loading tables"
                 });
             }
         }
 
         /// <summary>
+        /// Table QR code display page
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("createqr")]
+        public async Task<IActionResult> TableQrCode()
+        {
+            try
+            {
+                _logger.LogInformation("Loading table QR code page");
+
+                var response = await _apiService.GetAsync<TableListViewModel>("api/table/qr-codes");
+
+                if (response?.Tables == null)
+                {
+                    return View("Error", new ErrorViewModel
+                    {
+                        Message = "Unable to load table QR code data"
+                    });
+                }
+
+                var tableItems = response.Tables.Select(table => new RestX.UI.Models.ViewModels.TableItemViewModel
+                {
+                    TableNumber = table.TableNumber,
+                    QrCode = table.QrCodeUrl ?? "",
+                    OwnerId = table.OwnerId,
+                    TableStatusId = 1 // Default status, adjust as needed
+                }).ToList();
+
+                return View("~/Views/Management/Table/TableQrCode.cshtml", tableItems);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading table QR code page");
+                return View("Error", new ErrorViewModel
+                {
+                    Message = "An error occurred while loading table QR codes"
+                });
+            }
+        }
+
+        // ===== CRUD METHODS SỬ DỤNG IApiService =====
+
+        /// <summary>
+        /// Upsert table - sử dụng IApiService
+        /// </summary>
+        /// <param name="model">Table data từ form</param>
+        /// <returns></returns>
+        [HttpPost("Upsert")]
+        [Authorize(Roles = "Owner")]
+        public async Task<IActionResult> UpsertTable([FromForm] TableUpsertModel model)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                    return Json(new { success = false, message = string.Join(", ", errors) });
+                }
+
+                var currentUser = await _authService.GetCurrentUserAsync();
+                var ownerId = currentUser?.OwnerId ?? currentUser?.Id;
+
+                // Determine if create or update
+                if (model.Id.HasValue && model.Id.Value > 0)
+                {
+                    // Update existing table
+                    var updateData = new
+                    {
+                        Id = model.Id.Value,
+                        TableNumber = model.TableNumber,
+                        TableStatusId = model.TableStatusId,
+                        IsActive = model.IsActive,
+                        Qrcode = model.Qrcode
+                    };
+
+                    var response = await _apiService.PutAsync<object, object>($"api/table/{model.Id.Value}", updateData);
+
+                    if (response != null)
+                    {
+                        return Json(new { success = true, message = "Table updated successfully!" });
+                    }
+                }
+                else
+                {
+                    // Create new table
+                    var createData = new
+                    {
+                        TableNumber = model.TableNumber,
+                        TableStatusId = model.TableStatusId,
+                        IsActive = model.IsActive,
+                        OwnerId = ownerId
+                    };
+
+                    var response = await _apiService.PostAsync<object, object>("api/table", createData);
+
+                    if (response != null)
+                    {
+                        return Json(new { success = true, message = "Table added successfully!" });
+                    }
+                }
+
+                return Json(new { success = false, message = "Failed to save table" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error upserting table: {TableNumber}", model.TableNumber);
+                return Json(new { success = false, message = "An error occurred while saving table" });
+            }
+        }
+
+        /// <summary>
+        /// Get table details - sử dụng IApiService
+        /// </summary>
+        /// <param name="id">Table ID</param>
+        /// <returns></returns>
+        [HttpGet("Detail/{id:int}")]
+        public async Task<IActionResult> TableDetail(int id)
+        {
+            try
+            {
+                var response = await _apiService.GetAsync<TableApiModel>($"api/table/{id}");
+
+                if (response == null)
+                {
+                    return Json(new { success = false, message = "Table not found" });
+                }
+
+                return Json(new { success = true, data = response });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting table details for ID: {TableId}", id);
+                return Json(new { success = false, message = "An error occurred while loading table details" });
+            }
+        }
+
+        /// <summary>
+        /// Delete table - sử dụng IApiService
+        /// </summary>
+        /// <param name="id">Table ID</param>
+        /// <returns></returns>
+        [HttpDelete("Delete/{id:int}")]
+        [Authorize(Roles = "Owner")]
+        public async Task<IActionResult> DeleteTable(int id)
+        {
+            try
+            {
+                var success = await _apiService.DeleteAsync($"api/table/{id}");
+
+                if (success)
+                {
+                    return Json(new { success = true, message = "Table has been deleted." });
+                }
+
+                return Json(new { success = false, message = "Failed to delete table" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting table: {TableId}", id);
+                return Json(new { success = false, message = "An error occurred while deleting table" });
+            }
+        }
+
+        /// <summary>
+        /// Get table statuses - sử dụng IApiService
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("Statuses")]
+        public async Task<IActionResult> GetTableStatuses()
+        {
+            try
+            {
+                var statuses = await GetTableStatusesAsync();
+                return Json(new { success = true, data = statuses });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting table statuses");
+                return Json(new { success = false, message = "An error occurred while loading table statuses" });
+            }
+        }
+
+        // ===== GIỮ NGUYÊN CÁC METHOD KHÁC =====
+
+        /// <summary>
         /// Get all tables as JSON
         /// </summary>
         /// <returns></returns>
-        [HttpGet]
+        [HttpGet("GetTables")]
         public async Task<IActionResult> GetTables()
         {
             try
@@ -79,18 +337,18 @@ namespace RestX.UI.Controllers
         /// </summary>
         /// <param name="tableId">Table ID</param>
         /// <returns></returns>
-        [HttpGet]
+        [HttpGet("GetTable/{tableId:int}")]
         public async Task<IActionResult> GetTable(int tableId)
         {
             try
             {
                 var response = await _apiService.GetAsync<object>($"api/table/{tableId}");
-                
+
                 if (response != null)
                 {
                     return Json(new { success = true, data = response });
                 }
-                
+
                 return Json(new { success = false, message = "Table not found" });
             }
             catch (Exception ex)
@@ -101,126 +359,12 @@ namespace RestX.UI.Controllers
         }
 
         /// <summary>
-        /// Create new table
-        /// </summary>
-        /// <param name="model">Table data</param>
-        /// <returns></returns>
-        [HttpPost]
-        [Authorize(Roles = "Owner")]
-        public async Task<IActionResult> CreateTable(TableViewModel model)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
-                    return Json(new { success = false, message = string.Join(", ", errors) });
-                }
-
-                var currentUser = await _authService.GetCurrentUserAsync();
-                var ownerId = currentUser?.OwnerId ?? currentUser?.Id;
-
-                var createData = new
-                {
-                    Name = model.Name,
-                    Status = "Available",
-                    QrCode = model.QrCode,
-                    IsActive = model.IsActive ?? true,
-                    OwnerId = ownerId
-                };
-
-                var response = await _apiService.PostAsync<object, object>("api/table", createData);
-                
-                if (response != null)
-                {
-                    return Json(new { success = true, message = "Table created successfully" });
-                }
-                
-                return Json(new { success = false, message = "Failed to create table" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating table: {TableName}", model.Name);
-                return Json(new { success = false, message = "An error occurred while creating the table" });
-            }
-        }
-
-        /// <summary>
-        /// Update table
-        /// </summary>
-        /// <param name="model">Updated table data</param>
-        /// <returns></returns>
-        [HttpPost]
-        [Authorize(Roles = "Owner")]
-        public async Task<IActionResult> UpdateTable(TableViewModel model)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
-                    return Json(new { success = false, message = string.Join(", ", errors) });
-                }
-
-                var updateData = new
-                {
-                    Id = model.Id,
-                    Name = model.Name,
-                    Status = model.Status,
-                    QrCode = model.QrCode,
-                    IsActive = model.IsActive
-                };
-
-                var response = await _apiService.PutAsync<object, object>($"api/table/{model.Id}", updateData);
-                
-                if (response != null)
-                {
-                    return Json(new { success = true, message = "Table updated successfully" });
-                }
-                
-                return Json(new { success = false, message = "Failed to update table" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating table ID: {TableId}", model.Id);
-                return Json(new { success = false, message = "An error occurred while updating the table" });
-            }
-        }
-
-        /// <summary>
-        /// Delete table
-        /// </summary>
-        /// <param name="tableId">Table ID</param>
-        /// <returns></returns>
-        [HttpPost]
-        [Authorize(Roles = "Owner")]
-        public async Task<IActionResult> DeleteTable(int tableId)
-        {
-            try
-            {
-                var success = await _apiService.DeleteAsync($"api/table/{tableId}");
-                
-                if (success)
-                {
-                    return Json(new { success = true, message = "Table deleted successfully" });
-                }
-                
-                return Json(new { success = false, message = "Failed to delete table" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting table: {TableId}", tableId);
-                return Json(new { success = false, message = "An error occurred while deleting the table" });
-            }
-        }
-
-        /// <summary>
         /// Update table status
         /// </summary>
         /// <param name="tableId">Table ID</param>
         /// <param name="status">New status</param>
         /// <returns></returns>
-        [HttpPost]
+        [HttpPost("UpdateStatus")]
         public async Task<IActionResult> UpdateTableStatus(int tableId, string status)
         {
             try
@@ -237,12 +381,12 @@ namespace RestX.UI.Controllers
                 };
 
                 var response = await _apiService.PutAsync<object, object>("api/table/status", updateData);
-                
+
                 if (response != null)
                 {
                     return Json(new { success = true, message = "Table status updated successfully" });
                 }
-                
+
                 return Json(new { success = false, message = "Failed to update table status" });
             }
             catch (Exception ex)
@@ -257,8 +401,7 @@ namespace RestX.UI.Controllers
         /// </summary>
         /// <param name="tableId">Table ID</param>
         /// <returns></returns>
-        [HttpPost]
-        [Authorize(Roles = "Owner")]
+        [HttpPost("GenerateQrCode")]
         public async Task<IActionResult> GenerateQrCode(int tableId)
         {
             try
@@ -266,9 +409,8 @@ namespace RestX.UI.Controllers
                 var currentUser = await _authService.GetCurrentUserAsync();
                 var ownerId = currentUser?.OwnerId ?? currentUser?.Id;
 
-                // Generate QR code URL (this would point to the customer menu)
                 var qrCodeUrl = $"{Request.Scheme}://{Request.Host}/Home/Index/{ownerId}/{tableId}";
-                
+
                 var updateData = new
                 {
                     TableId = tableId,
@@ -276,12 +418,12 @@ namespace RestX.UI.Controllers
                 };
 
                 var response = await _apiService.PutAsync<object, object>("api/table/qrcode", updateData);
-                
+
                 if (response != null)
                 {
                     return Json(new { success = true, message = "QR code generated successfully", qrCode = qrCodeUrl });
                 }
-                
+
                 return Json(new { success = false, message = "Failed to generate QR code" });
             }
             catch (Exception ex)
@@ -292,21 +434,21 @@ namespace RestX.UI.Controllers
         }
 
         /// <summary>
-        /// Table QR code display page
+        /// Table QR code display page for individual table
         /// </summary>
         /// <param name="tableId">Table ID</param>
         /// <returns></returns>
-        [HttpGet]
+        [HttpGet("QrCode/{tableId:int}")]
         public async Task<IActionResult> QrCode(int tableId)
         {
             try
             {
                 var response = await _apiService.GetAsync<object>($"api/table/{tableId}");
-                
+
                 if (response == null)
                 {
-                    return View("Error", new ErrorViewModel 
-                    { 
+                    return View("Error", new ErrorViewModel
+                    {
                         Message = "Table not found",
                         StatusCode = 404
                     });
@@ -317,66 +459,205 @@ namespace RestX.UI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading QR code page for table: {TableId}", tableId);
-                return View("Error", new ErrorViewModel 
-                { 
+                return View("Error", new ErrorViewModel
+                {
                     Message = "An error occurred while loading QR code"
                 });
             }
         }
 
+        /// <summary>
+        /// Error handling
+        /// </summary>
+        /// <returns></returns>
+        public IActionResult Error()
+        {
+            return View("Error", new ErrorViewModel
+            {
+                Message = "An unexpected error occurred"
+            });
+        }
+
         #region Private Methods
+
+        /// <summary>
+        /// Get table statuses using API
+        /// </summary>
+        /// <returns></returns>
+        private async Task<List<TableStatusViewModel>> GetTableStatusesAsync()
+{
+    try
+    {
+        // First, try to get the actual table statuses from the API
+        var response = await _apiService.GetStringAsync("api/table/statuses");
+
+        if (!string.IsNullOrEmpty(response))
+        {
+            _logger.LogInformation("Table statuses API response: {Response}", response);
+
+            try
+            {
+                // Try to deserialize as ApiResponse wrapper first
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<List<object>>>(response, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (apiResponse?.Success == true && apiResponse.Data != null)
+                {
+                    var statuses = new List<TableStatusViewModel>();
+                    
+                    foreach (var item in apiResponse.Data)
+                    {
+                        if (item is JsonElement element)
+                        {
+                            var status = new TableStatusViewModel
+                            {
+                                Id = element.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : 0,
+                                TableNumber = 0, // This might not be relevant for status types
+                                TableStatus = new TableStatusDetailViewModel
+                                {
+                                    Id = element.TryGetProperty("id", out var statusIdProp) ? statusIdProp.GetInt32() : 0,
+                                    Name = element.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : "Unknown"
+                                }
+                            };
+                            statuses.Add(status);
+                        }
+                    }
+
+                    if (statuses.Any())
+                    {
+                        _logger.LogInformation("Successfully parsed table statuses, count: {Count}", statuses.Count);
+                        return statuses;
+                    }
+                }
+
+                // Fallback: Try direct array parsing
+                var jsonDocument = JsonDocument.Parse(response);
+                var statusList = new List<TableStatusViewModel>();
+
+                if (jsonDocument.RootElement.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var element in jsonDocument.RootElement.EnumerateArray())
+                    {
+                        var status = new TableStatusViewModel
+                        {
+                            Id = element.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : 0,
+                            TableNumber = 0,
+                            TableStatus = new TableStatusDetailViewModel
+                            {
+                                Id = element.TryGetProperty("id", out var statusIdProp) ? statusIdProp.GetInt32() : 0,
+                                Name = element.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : "Unknown"
+                            }
+                        };
+                        statusList.Add(status);
+                    }
+
+                    if (statusList.Any())
+                    {
+                        _logger.LogInformation("Successfully parsed table statuses manually, count: {Count}", statusList.Count);
+                        return statusList;
+                    }
+                }
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Failed to parse table statuses response");
+            }
+        }
+        else
+        {
+            _logger.LogWarning("Table statuses API returned empty response");
+        }
+
+        return GetDefaultTableStatuses();
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error getting table statuses from API");
+        return GetDefaultTableStatuses();
+    }
+}
+
+private static List<TableStatusViewModel> GetDefaultTableStatuses()
+{
+    return new List<TableStatusViewModel>
+    {
+        new() { 
+            Id = 1, 
+            TableNumber = 0, 
+            TableStatus = new TableStatusDetailViewModel { Id = 1, Name = "Available" }
+        },
+        new() { 
+            Id = 2, 
+            TableNumber = 0, 
+            TableStatus = new TableStatusDetailViewModel { Id = 2, Name = "Occupied" }
+        },
+        new() { 
+            Id = 3, 
+            TableNumber = 0, 
+            TableStatus = new TableStatusDetailViewModel { Id = 3, Name = "Reserved" }
+        },
+        new() { 
+            Id = 4, 
+            TableNumber = 0, 
+            TableStatus = new TableStatusDetailViewModel { Id = 4, Name = "Maintenance" }
+        }
+    };
+}
 
         /// <summary>
         /// Get tables from API
         /// </summary>
         /// <returns></returns>
-        private async Task<List<TableViewModel>> GetTablesAsync()
+        private async Task<List<TableApiModel>> GetTablesAsync()
         {
             try
             {
                 var currentUser = await _authService.GetCurrentUserAsync();
                 var ownerId = currentUser?.OwnerId ?? currentUser?.Id;
-                
+
                 if (ownerId == null)
                 {
                     _logger.LogWarning("No owner context found for tables");
-                    return new List<TableViewModel>();
+                    return new List<TableApiModel>();
                 }
 
-                var response = await _apiService.GetAsync<object>($"api/table/owner/{ownerId}");
-                
-                // This is a simplified version - you would need proper mapping
-                // For now, return empty list as we don't have the full API model structure
-                return new List<TableViewModel>();
+                var response = await _apiService.GetAsync<TableListViewModel>("api/table/owner");
+                return response?.Tables ?? new List<TableApiModel>();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting tables from API");
-                return new List<TableViewModel>();
+                return new List<TableApiModel>();
             }
         }
 
         #endregion
     }
+    // ===== VIEWMODELS =====
 
-    // Additional ViewModels for Table management
-    public class TableViewModel
+    /// <summary>
+    /// Form model cho Table Upsert operation
+    /// </summary>
+    public class TableUpsertModel
+    {
+        public int? Id { get; set; }
+        public int TableNumber { get; set; }
+        public int TableStatusId { get; set; }
+        public bool IsActive { get; set; } = true;
+        public string? Qrcode { get; set; }
+    }
+
+    /// <summary>
+    /// ViewModel cho QR Code page
+    /// </summary>
+    public class TableItemViewModel
     {
         public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Status { get; set; } = "Available";
+        public int TableNumber { get; set; }
         public string QrCode { get; set; } = string.Empty;
-        public bool? IsActive { get; set; } = true;
         public Guid OwnerId { get; set; }
     }
-
-    public class TableManagementViewModel
-    {
-        public List<TableViewModel> Tables { get; set; } = new();
-        public TableViewModel NewTable { get; set; } = new();
-        public int TotalTables { get; set; }
-        public int AvailableTables { get; set; }
-        public int OccupiedTables { get; set; }
-        public string? ErrorMessage { get; set; }
-    }
 }
+    // 

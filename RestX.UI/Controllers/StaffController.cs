@@ -82,6 +82,21 @@ namespace RestX.UI.Controllers
         /// <summary>
         /// Staff Management page - tương ứng với route /StaffManagement/StaffManagement
         /// </summary>
+        ///         [HttpGet]
+        public IActionResult PaymentReturn([FromQuery] string? orderCode, [FromQuery] string? status)
+        {
+            ViewBag.OrderCode = orderCode;
+            ViewBag.Status = status;
+            return View();
+        }
+
+        [HttpGet]
+        public IActionResult PaymentCancel([FromQuery] string? orderCode, [FromQuery] string? status)
+        {
+            ViewBag.OrderCode = orderCode;
+            ViewBag.Status = status;
+            return View();
+        }
         [HttpGet]
         [Route("StaffManagement/StaffManagement")]
         public async Task<IActionResult> StaffManagement()
@@ -99,7 +114,6 @@ namespace RestX.UI.Controllers
                         Message = "Unable to load staff management data"
                     });
                 }
-       
 
                 return View("~/Views/Management/StaffManagement.cshtml", staffManagement);
             }

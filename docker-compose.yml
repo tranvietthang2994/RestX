@@ -4,7 +4,7 @@ services:
   # 1. Database
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: restx_sql  # Đặt tên khớp với container bạn đang chạy
+    container_name: restx_sql
     restart: always
     environment:
       - ACCEPT_EULA=Y
@@ -13,7 +13,7 @@ services:
     ports:
       - "1433:1433"
     volumes:
-      # Trỏ đúng vào thư mục data bạn đã tạo ở bước trước trên VPS
+      # ✅ QUAN TRỌNG: Dùng .. để trỏ ra ngoài giữ lại dữ liệu cũ
       - ../sqlserver/data:/var/opt/mssql
     networks:
       - restx-network
@@ -27,9 +27,11 @@ services:
     restart: always
     environment:
       - ConnectionStrings__RestX=Server=db,1433;Database=RestX_RestaurantManagement;User Id=sa;Password=MatKhauManh!2025;TrustServerCertificate=True;
-      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_ENVIRONMENT=Development
+      # ✅ Ghi đè url API thành cổng 5000 (Public)
+      - ApiSettings__BaseUrl=http://160.250.5.94:5000/
     ports:
-      - "5000:8080" # API sẽ chạy ở cổng 5000 của VPS
+      - "5000:8080"
     depends_on:
       - db
     networks:
@@ -43,13 +45,12 @@ services:
     container_name: restx_ui
     restart: always
     environment:
-      # UI kết nối DB (nếu cần)
       - ConnectionStrings__RestX=Server=db,1433;Database=RestX_RestaurantManagement;User Id=sa;Password=MatKhauManh!2025;TrustServerCertificate=True;
-      # UI gọi API qua tên service 'api'
-      - ApiSettings__BaseUrl=http://api:8080
-      - ASPNETCORE_ENVIRONMENT=Production
+      # ✅ UI gọi API qua mạng nội bộ (Cổng 8080)
+      - ApiSettings__BaseUrl=http://api:8080/
+      - ASPNETCORE_ENVIRONMENT=Development
     ports:
-      - "80:8080" # Web chính chạy ở cổng 80 (http mặc định)
+      - "80:8080"
     depends_on:
       - api
     networks:
