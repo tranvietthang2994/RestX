@@ -37,7 +37,7 @@ builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 builder.Services.AddAutoMapper(typeof(Program));
 
 // Register services
-builder.Services.AddScoped<IApiService, ApiService>();
+//builder.Services.AddScoped<IApiService, ApiService>();
 builder.Services.AddScoped<IStaffService, StaffService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
