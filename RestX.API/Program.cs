@@ -449,8 +449,8 @@ app.UseRouting();
 
 // 🟨 Session is needed for AuthCustomerService and AuthController
 app.UseSession();
-app.UseAuthentication();
-app.UseAuthorization();
+//app.UseAuthentication();
+//app.UseAuthorization();
 
 // Controllers
 app.MapControllers();
