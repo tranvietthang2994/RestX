@@ -3,7 +3,8 @@
  */
 window.StaffPageManager = (function () {
     let currentPageCleanup = null;
-    let signalRConnection = null;
+    let tableStatusSignalRConnection = null;
+    let orderSignalRConnection = null;
 
     const pages = {
         "/Staff/StatusTable": {
@@ -52,64 +53,6 @@ window.StaffPageManager = (function () {
     function initStatusTablePage() {
         console.log("Initializing StatusTable page");
 
-        // Initialize SignalR connection if not exists
-        if (
-            !signalRConnection ||
-            signalRConnection.state !== signalR.HubConnectionState.Connected
-        ) {
-            console.log("Creating new SignalR connection...");
-            signalRConnection = new signalR.HubConnectionBuilder()
-                .withUrl("/tableStatusHub")
-                .configureLogging(signalR.LogLevel.Debug)
-                .build();
-
-            async function startSignalR() {
-                try {
-                    await signalRConnection.start();
-                    console.log("SignalR Connected successfully!");
-                } catch (err) {
-                    console.error("SignalR connection error:", err);
-                    setTimeout(startSignalR, 5000);
-                }
-            }
-
-            signalRConnection.onclose(async () => {
-                console.log("SignalR connection closed, attempting to reconnect...");
-                await startSignalR();
-            });
-
-            // Real-time update handler
-            signalRConnection.on("ReceiveTableStatusUpdate", function (updatedTable) {
-                console.log("Received SignalR update:", updatedTable);
-                const tableCard = document.getElementById("table-" + updatedTable.id);
-
-                if (tableCard) {
-                    console.log("Found table card, updating...");
-                    const statusDiv = tableCard.querySelector(".table-card-status");
-                    statusDiv.textContent = updatedTable.tableStatus.name;
-
-                    // Remove all status classes and add new one
-                    tableCard.className = "table-card";
-                    const newStatusClass = getTableStatusClass(
-                        updatedTable.tableStatus.id
-                    );
-                    if (newStatusClass) {
-                        tableCard.classList.add(newStatusClass);
-                    }
-                    console.log("Table card updated successfully");
-                } else {
-                    console.warn(
-                        "Table card not found for ID:",
-                        "table-" + updatedTable.id
-                    );
-                }
-            });
-
-            startSignalR();
-        }
-
-        let activeTableId = null;
-
         function getTableStatusClass(status) {
             switch (status) {
                 case 2:
@@ -124,6 +67,92 @@ window.StaffPageManager = (function () {
                     return "";
             }
         }
+
+        // Initialize SignalR connection for table status if not exists
+        if (
+            !tableStatusSignalRConnection ||
+            tableStatusSignalRConnection.state !== signalR.HubConnectionState.Connected
+        ) {
+            console.log("Creating new SignalR connection for StatusTable...");
+            tableStatusSignalRConnection = new signalR.HubConnectionBuilder()
+                .withUrl("https://localhost:7294/tableStatusHub", {
+                    skipNegotiation: false,
+                    withCredentials: true
+                })
+                .configureLogging(signalR.LogLevel.Debug)
+                .withAutomaticReconnect()
+                .build();
+
+            async function startTableStatusSignalR() {
+                try {
+                    await tableStatusSignalRConnection.start();
+                    console.log("SignalR Connected to table status hub successfully!");
+                } catch (err) {
+                    console.error("SignalR table status connection error:", err);
+                    setTimeout(startTableStatusSignalR, 5000);
+                }
+            }
+
+            tableStatusSignalRConnection.onclose(async () => {
+                console.log("SignalR table status connection closed, attempting to reconnect...");
+                await startTableStatusSignalR();
+            });
+
+            startTableStatusSignalR();
+        }
+
+        // Always re-register event handlers when page loads
+        tableStatusSignalRConnection.off("ReceiveTableStatusUpdate");
+        tableStatusSignalRConnection.off("ReceiveTableStatusList");
+
+        // Real-time update handler for single table
+        tableStatusSignalRConnection.on("ReceiveTableStatusUpdate", function (updatedTable) {
+            console.log("Received SignalR update:", updatedTable);
+            const tableCard = document.getElementById("table-" + updatedTable.id);
+
+            if (tableCard) {
+                console.log("Found table card, updating...");
+                const statusDiv = tableCard.querySelector(".table-card-status");
+                statusDiv.textContent = updatedTable.tableStatus.name;
+
+                // Remove all status classes and add new one
+                tableCard.className = "table-card";
+                const newStatusClass = getTableStatusClass(
+                    updatedTable.tableStatus.id
+                );
+                if (newStatusClass) {
+                    tableCard.classList.add(newStatusClass);
+                }
+                console.log("Table card updated successfully");
+            } else {
+                console.warn(
+                    "Table card not found for ID:",
+                    "table-" + updatedTable.id
+                );
+            }
+        });
+
+        // Real-time update handler for table list (when order is confirmed)
+        tableStatusSignalRConnection.on("ReceiveTableStatusList", function (tableList) {
+            console.log("Received table status list update:", tableList);
+            // Update all table cards based on the new list
+            tableList.forEach(function(table) {
+                const tableCard = document.getElementById("table-" + table.id);
+                if (tableCard) {
+                    const statusDiv = tableCard.querySelector(".table-card-status");
+                    statusDiv.textContent = table.tableStatus.name;
+
+                    // Remove all status classes and add new one
+                    tableCard.className = "table-card";
+                    const newStatusClass = getTableStatusClass(table.tableStatus.id);
+                    if (newStatusClass) {
+                        tableCard.classList.add(newStatusClass);
+                    }
+                }
+            });
+        });
+
+        let activeTableId = null;
 
         function showModal(tableId, tableNumber) {
             const statusModal = document.getElementById("statusModal");
@@ -166,9 +195,9 @@ window.StaffPageManager = (function () {
                     activeTableId
                 );
 
-                if (activeTableId && signalRConnection) {
+                if (activeTableId && tableStatusSignalRConnection) {
                     console.log("Sending UpdateTableStatus via SignalR...");
-                    signalRConnection
+                    tableStatusSignalRConnection
                         .invoke("UpdateTableStatus", parseInt(activeTableId), newStatusId)
                         .then(() => {
                             console.log("UpdateTableStatus sent successfully");
@@ -367,17 +396,35 @@ window.StaffPageManager = (function () {
         }
 
         // --- SignalR real-time for new order ---
-        if (!window.StaffPageManager.signalRConnection) {
-            window.StaffPageManager.signalRConnection =
-                new signalR.HubConnectionBuilder()
-                    .withUrl("/signalrServer")
-                    .configureLogging(signalR.LogLevel.Debug)
-                    .build();
-            window.StaffPageManager.signalRConnection.start().catch(function (err) {
-                console.error("SignalR connection error:", err);
+        if (!orderSignalRConnection || orderSignalRConnection.state !== signalR.HubConnectionState.Connected) {
+            console.log("Creating new SignalR connection for Orders...");
+            orderSignalRConnection = new signalR.HubConnectionBuilder()
+                .withUrl("https://localhost:7294/signalrServer", {
+                    skipNegotiation: false,
+                    withCredentials: true
+                })
+                .configureLogging(signalR.LogLevel.Debug)
+                .withAutomaticReconnect()
+                .build();
+
+            async function startOrderSignalR() {
+                try {
+                    await orderSignalRConnection.start();
+                    console.log("SignalR Connected to order hub successfully!");
+                } catch (err) {
+                    console.error("SignalR order connection error:", err);
+                    setTimeout(startOrderSignalR, 5000);
+                }
+            }
+
+            orderSignalRConnection.onclose(async () => {
+                console.log("SignalR order connection closed, attempting to reconnect...");
+                await startOrderSignalR();
             });
+
+            startOrderSignalR();
         }
-        const signalRConnection = window.StaffPageManager.signalRConnection;
+        const signalRConnection = orderSignalRConnection;
         if (signalRConnection) {
             signalRConnection.off("ReceiveOrderList");
             signalRConnection.on("ReceiveOrderList", function (orders) {
@@ -420,9 +467,12 @@ window.StaffPageManager = (function () {
                         )}</span>
                         </div>
                         <div class="order-status">
-                            <span class="status-badge status-${order.orderStatus
+                            <div class="status-badges">
+                                <span class="status-badge status-${order.orderStatus
                             .toLowerCase()
                             .replace(/ /g, "-")}">${order.orderStatus}</span>
+                                ${!order.isPaid ? '<span class="payment-badge payment-unpaid">UNPAID</span>' : ''}
+                            </div>
                             <span class="total-amount">${order.totalAmount.toLocaleString(
                                 "en-US",
                                 { style: "currency", currency: "USD" }
@@ -447,6 +497,16 @@ window.StaffPageManager = (function () {
                             ? `<button class="btn-action btn-edit" onclick="editOrderDetails('${order.id}')"><i class="ti ti-edit"></i> Edit Items</button>`
                             : ""
                         }
+                        ${order.orderStatusId === 4 && !order.isPaid
+                            ? `<button class="btn-action btn-checkout" onclick="showCheckoutModal('${order.id}', ${Math.round(order.totalAmount)})" data-order-id="${order.id}" data-order-status="${order.orderStatusId}" data-is-paid="${order.isPaid}">
+                                <i class="ti ti-cash"></i> Checkout
+                               </button>`
+                            : order.orderStatusId < 4
+                                ? `<button class="btn-action btn-confirm" onclick="confirmOrder('${order.id}', ${order.orderStatusId})" data-order-id="${order.id}" data-current-status="${order.orderStatusId}">
+                                    <i class="ti ti-arrow-right"></i> ${getNextStatusButtonText(order.orderStatusId)}
+                                   </button>`
+                                : ""
+                        }
                     </div>
                 </div>`;
                 });
@@ -459,6 +519,16 @@ window.StaffPageManager = (function () {
             }
             listDiv.innerHTML = html;
         }
+
+        function getNextStatusButtonText(currentStatusId) {
+            const buttonTexts = {
+                1: "Start Preparing",   // Pending -> Preparing
+                2: "Mark as Ready",     // Preparing -> Ready
+                3: "Complete Order",    // Ready -> Completed
+            };
+            return buttonTexts[currentStatusId] || "Update Status";
+        }
+
         function formatTimeAgo(orderTime) {
             if (!orderTime) return "";
             const orderDate = new Date(orderTime);
@@ -681,10 +751,185 @@ window.StaffPageManager = (function () {
             hasChanges = false;
         };
 
+        // Change Order Status - Move to next status
+        window.confirmOrder = async function (orderId, currentStatusId) {
+            const statusTransitions = {
+                1: { current: "Pending", next: "Preparing", action: "start preparing" },
+                2: { current: "Preparing", next: "Ready", action: "mark as ready" },
+                3: { current: "Ready", next: "Completed", action: "complete" }
+            };
+
+            const transition = statusTransitions[currentStatusId];
+            if (!transition) {
+                alert("Cannot change this order status.");
+                return;
+            }
+
+            const confirmMessage = `Are you sure you want to ${transition.action} this order?\n\nStatus will change: ${transition.current} → ${transition.next}`;
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            const button = document.querySelector(`.btn-confirm[data-order-id="${orderId}"]`);
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i class="ti ti-loader"></i> Processing...';
+            }
+
+            try {
+                const apiBaseUrl = "https://localhost:7294/api/Staff/order-status";
+                const newStatusId = currentStatusId + 1; // Move to next status
+
+                const response = await fetch(apiBaseUrl, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        orderId: orderId,
+                        newStatusId: newStatusId
+                    }),
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    console.log(`✅ Order status changed successfully to ${transition.next}`);
+                    // Wait a bit for SignalR to broadcast, then reload manually as backup
+                    setTimeout(() => {
+                        // If SignalR hasn't updated yet (button still disabled), force reload
+                        const checkButton = document.querySelector(`.btn-confirm[data-order-id="${orderId}"]`);
+                        if (checkButton && checkButton.disabled) {
+                            console.log("SignalR update delayed, reloading data manually...");
+                            location.reload();
+                        }
+                    }, 2000);
+                } else {
+                    alert(`⚠️ Failed to update order status: ${result.message || "Please try again."}`);
+                    if (button) {
+                        button.disabled = false;
+                        button.innerHTML = `<i class="ti ti-arrow-right"></i> ${getNextStatusButtonText(currentStatusId)}`;
+                    }
+                }
+            } catch (error) {
+                console.error("Error updating order status:", error);
+                alert("❌ An error occurred. Please try again.");
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML = `<i class="ti ti-arrow-right"></i> ${getNextStatusButtonText(currentStatusId)}`;
+                }
+            }
+        };
+
+        // Payment checkout functionality
+        let currentPaymentData = null;
+        let paymentCheckInterval = null;
+
+        window.showCheckoutModal = async function(orderId, amount) {
+            console.log("showCheckoutModal called with orderId:", orderId, "amount:", amount);
+
+            try {
+                console.log("Calling payment API...");
+
+                // Call API to create payment link
+                const response = await fetch("https://localhost:7294/api/Payment/create", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        orderId: orderId,
+                        description: `Payment for order`
+                    })
+                });
+
+                console.log("Payment API response status:", response.status);
+                const result = await response.json();
+                console.log("Payment API result:", result);
+
+                if (response.ok && result.success) {
+                    currentPaymentData = result.data;
+
+                    // Redirect to PayOS checkout page
+                    console.log("Redirecting to PayOS checkout URL:", result.data.checkoutUrl);
+                    window.open(result.data.checkoutUrl, '_blank');
+
+                    // Start polling payment status in background
+                    startPaymentStatusPolling(result.data.orderCode, orderId);
+                } else {
+                    console.error("Payment creation failed:", result);
+                    alert(`❌ Failed to generate payment: ${result.message || "Please try again."}`);
+                }
+            } catch (error) {
+                console.error("Error creating payment:", error);
+                alert(`❌ An error occurred: ${error.message}`);
+            }
+        };
+
+        function startPaymentStatusPolling(orderCode, orderId) {
+            // Clear any existing interval
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+            }
+
+            // Check payment status every 3 seconds
+            paymentCheckInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`https://localhost:7294/api/Payment/${orderCode}`);
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        const paymentStatus = result.data.status;
+
+                        if (paymentStatus === "PAID" || paymentStatus === "COMPLETED") {
+                            // Payment successful!
+                            clearInterval(paymentCheckInterval);
+                            await handlePaymentSuccess(orderId);
+                        } else if (paymentStatus === "CANCELLED" || paymentStatus === "EXPIRED") {
+                            clearInterval(paymentCheckInterval);
+                            document.getElementById("paymentInfo").innerHTML = '<p style="color: #e74c3c; font-size: 1.2em;">❌ Payment cancelled or expired</p>';
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error checking payment status:", error);
+                }
+            }, 3000); // Check every 3 seconds
+        }
+
+        async function handlePaymentSuccess(orderId) {
+            // Clear the polling interval
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+                paymentCheckInterval = null;
+            }
+
+            // Show success notification
+            alert('✅ Payment completed successfully! The page will refresh to update the order list.');
+
+            // Reload to fetch updated order list (now marked as PAID)
+            location.reload();
+        }
+
+        window.closePaymentModal = function() {
+            const modal = document.getElementById("paymentQRModal");
+            if (modal) {
+                modal.style.display = "none";
+            }
+
+            // Clear payment check interval
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+                paymentCheckInterval = null;
+            }
+
+            currentPaymentData = null;
+        };
+
         // Modal click outside handler
         const modalClickHandler = function (event) {
-            const modal = document.getElementById("orderDetailsModal");
-            if (event.target === modal) {
+            const orderModal = document.getElementById("orderDetailsModal");
+
+            if (event.target === orderModal) {
                 window.closeModal();
             }
         };
@@ -694,12 +939,22 @@ window.StaffPageManager = (function () {
         return function () {
             console.log("Cleaning up CustomerRequest page");
             window.removeEventListener("click", modalClickHandler);
+
+            // Clear payment polling interval if active
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+                paymentCheckInterval = null;
+            }
+
             // Clean up global functions
             delete window.showOrderDetails;
             delete window.editOrderDetails;
             delete window.toggleOrderDetail;
             delete window.saveOrderDetailsChanges;
             delete window.closeModal;
+            delete window.confirmOrder;
+            delete window.showCheckoutModal;
+            delete window.closePaymentModal;
         };
     }
 

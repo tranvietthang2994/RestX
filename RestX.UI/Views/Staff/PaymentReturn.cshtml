@@ -1,0 +1,242 @@
+@{
+    ViewData["Title"] = "Payment Success";
+    Layout = "_StaffLayout";
+}
+
+<div class="payment-result-container">
+    <div class="payment-result-card success">
+        <div class="payment-icon">
+            <i class="ti ti-circle-check"></i>
+        </div>
+        <h1>Payment Successful!</h1>
+        <p class="payment-message">Your payment has been processed successfully.</p>
+
+        @if (!string.IsNullOrEmpty(ViewBag.OrderCode))
+        {
+            <div class="payment-details">
+                <p><strong>Order Code:</strong> @ViewBag.OrderCode</p>
+                @if (!string.IsNullOrEmpty(ViewBag.Status))
+                {
+                    <p><strong>Status:</strong> @ViewBag.Status</p>
+                }
+            </div>
+        }
+
+        <div class="payment-actions">
+            <a href="@Url.Action("CustomerRequests", "Staff")" class="btn btn-primary">
+                <i class="ti ti-clipboard-list"></i> Back to Orders
+            </a>
+        </div>
+
+        <div class="auto-redirect-message">
+            <i class="ti ti-clock"></i>
+            <span>You will be redirected to the orders page in <span id="countdown">5</span> seconds...</span>
+        </div>
+    </div>
+</div>
+
+<style>
+    .payment-result-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: calc(100vh - 200px);
+        padding: 20px;
+    }
+
+    .payment-result-card {
+        background: white;
+        border-radius: 12px;
+        padding: 60px 40px;
+        text-align: center;
+        max-width: 600px;
+        width: 100%;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .payment-result-card.success {
+        border-top: 5px solid #27ae60;
+    }
+
+    .payment-icon {
+        font-size: 80px;
+        color: #27ae60;
+        margin-bottom: 20px;
+    }
+
+    .payment-result-card h1 {
+        color: #27ae60;
+        font-size: 2em;
+        margin-bottom: 15px;
+    }
+
+    .payment-message {
+        color: #6c757d;
+        font-size: 1.1em;
+        margin-bottom: 30px;
+    }
+
+    .payment-details {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+        text-align: left;
+    }
+
+    .payment-details p {
+        margin: 10px 0;
+        color: #2c3e50;
+    }
+
+    .payment-details strong {
+        font-weight: 600;
+        color: #34495e;
+    }
+
+    .payment-actions {
+        margin-bottom: 20px;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 30px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1em;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background: #3498db;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #2980b9;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+    }
+
+    .auto-redirect-message {
+        color: #95a5a6;
+        font-size: 0.9em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .auto-redirect-message i {
+        font-size: 1.2em;
+    }
+
+    #countdown {
+        font-weight: bold;
+        color: #3498db;
+    }
+
+    @@media (max-width: 768px) {
+        .payment-result-container {
+            min-height: calc(100vh - 100px);
+            padding: 15px;
+        }
+
+        .payment-result-card {
+            padding: 40px 20px;
+            max-width: 100%;
+        }
+
+        .payment-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+
+        .payment-result-card h1 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .payment-message {
+            font-size: 1em;
+            margin-bottom: 20px;
+        }
+
+        .payment-details {
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .payment-details p {
+            font-size: 0.9em;
+            margin: 8px 0;
+        }
+
+        .payment-actions {
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 0.95em;
+            justify-content: center;
+        }
+
+        .auto-redirect-message {
+            font-size: 0.85em;
+            flex-wrap: wrap;
+        }
+    }
+
+    @@media (max-width: 576px) {
+        .payment-result-card {
+            padding: 30px 15px;
+        }
+
+        .payment-icon {
+            font-size: 50px;
+        }
+
+        .payment-result-card h1 {
+            font-size: 1.3em;
+        }
+
+        .payment-message {
+            font-size: 0.95em;
+        }
+
+        .payment-details {
+            padding: 12px;
+        }
+
+        .payment-details p {
+            font-size: 0.85em;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            font-size: 0.9em;
+        }
+    }
+</style>
+
+<script>
+    // Auto redirect after 5 seconds
+    let countdown = 5;
+    const countdownElement = document.getElementById('countdown');
+
+    const interval = setInterval(() => {
+        countdown--;
+        countdownElement.textContent = countdown;
+
+        if (countdown <= 0) {
+            clearInterval(interval);
+            window.location.href = '@Url.Action("CustomerRequests", "Staff")';
+        }
+    }, 1000);
+</script>
