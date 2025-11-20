@@ -1,4 +1,4 @@
-using RestX.UI.Models.ApiModels;
+﻿using RestX.UI.Models.ApiModels;
 using RestX.UI.Models.ViewModels;
 using RestX.UI.Services.Interfaces;
 
@@ -26,7 +26,7 @@ namespace RestX.UI.Services.Implementations
             {
                 var currentUser = await _authService.GetCurrentUserAsync();
                 var ownerId = currentUser?.OwnerId ?? currentUser?.Id;
-                
+
                 if (ownerId == null)
                 {
                     _logger.LogWarning("No owner context found for dishes management");
@@ -36,30 +36,41 @@ namespace RestX.UI.Services.Implementations
                     };
                 }
 
-                var dishesResponse = await _apiService.GetAsync<ApiResponse<List<DishApiModel>>>($"api/dish/owner/{ownerId}");
-                var categoriesResponse = await _apiService.GetAsync<ApiResponse<List<CategoryApiModel>>>($"api/category/owner/{ownerId}");
-                
-                var dishes = new List<DishViewModel>();
-                var categories = new List<CategoryViewModel>();
+                // Fix: Gọi API và expect DishesManagementViewModel thay vì List<DishApiModel>
+                var response = await _apiService.GetAsync<ApiResponse<DishesManagementViewModel>>($"api/Dish/owner/{ownerId}");
 
-                if (dishesResponse?.Success == true && dishesResponse.Data != null)
+                if (response?.Success == true && response.Data != null)
                 {
-                    dishes = dishesResponse.Data.Select(MapToDishViewModel).ToList();
+                    // API đã trả về full DishesManagementViewModel rồi, chỉ cần convert
+                    var result = response.Data;
+
+                    // Convert dishes từ API format sang UI format nếu cần
+                    if (result.Dishes != null)
+                    {
+                        // Nếu cần mapping từ API model sang UI model
+                        var uiDishes = result.Dishes.Select(d => new DishViewModel
+                        {
+                            Id = d.Id,
+                            Name = d.Name,
+                            Description = d.Description,
+                            Price = d.Price,
+                            IsActive = d.IsActive,
+                            CategoryId = d.CategoryId,        // Add this
+                            CategoryName = d.CategoryName,    // Add this
+                            ImageUrl = d.ImageUrl,           // Add this if missing
+                            CreatedDate = d.CreatedDate,     // Add this if missing
+                            ModifiedDate = d.ModifiedDate    // Add this if missing
+                        }).ToList();
+                        result.Dishes = uiDishes;
+                    }
+
+                    return result;
                 }
 
-                if (categoriesResponse?.Success == true && categoriesResponse.Data != null)
-                {
-                    categories = categoriesResponse.Data.Select(MapToCategoryViewModel).ToList();
-                }
-
+                _logger.LogWarning("Failed to get dishes management for owner: {OwnerId}", ownerId);
                 return new DishesManagementViewModel
                 {
-                    Dishes = dishes,
-                    Categories = categories,
-                    TotalDishes = dishes.Count,
-                    ActiveDishes = dishes.Count(d => d.IsActive == true),
-                    TotalCategories = categories.Count,
-                    ActiveCategories = categories.Count(c => c.IsActive)
+                    ErrorMessage = "Failed to load dishes management data"
                 };
             }
             catch (Exception ex)
@@ -245,7 +256,7 @@ namespace RestX.UI.Services.Implementations
                     return new List<CategoryViewModel>();
                 }
 
-                var response = await _apiService.GetAsync<ApiResponse<List<CategoryApiModel>>>($"api/category/owner/{ownerId}");
+                var response = await _apiService.GetAsync<ApiResponse<List<CategoryApiModel>>>($"api/Category");
                 
                 if (response?.Success == true && response.Data != null)
                 {

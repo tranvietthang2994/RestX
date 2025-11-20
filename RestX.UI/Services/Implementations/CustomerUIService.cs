@@ -119,6 +119,7 @@ namespace RestX.UI.Services.Implementations
                     Name = model.Name,
                     Phone = model.Phone,
                     Email = model.Email,
+                    Point = model.Point,
                     Address = model.Address,
                     DateOfBirth = model.DateOfBirth,
                     OwnerId = ownerId,
