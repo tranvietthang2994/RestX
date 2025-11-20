@@ -57,6 +57,21 @@ namespace RestX.UI.Controllers
             }
         }
 
+        [HttpGet]
+        public IActionResult PaymentReturn([FromQuery] string? orderCode, [FromQuery] string? status)
+        {
+            ViewBag.OrderCode = orderCode;
+            ViewBag.Status = status;
+            return View();
+        }
+
+        [HttpGet]
+        public IActionResult PaymentCancel([FromQuery] string? orderCode, [FromQuery] string? status)
+        {
+            ViewBag.OrderCode = orderCode;
+            ViewBag.Status = status;
+            return View();
+        }
 
     }
 }

@@ -42,6 +42,7 @@ public partial class RestXRestaurantManagementContext : Microsoft.EntityFramewor
     public virtual DbSet<Owner> Owners { get; set; }
 
     public virtual DbSet<Payment> Payments { get; set; }
+    public virtual DbSet<PaymentTransaction> PaymentTransactions { get; set; }
 
     public virtual DbSet<PaymentMethod> PaymentMethods { get; set; }
 
@@ -352,6 +353,28 @@ public partial class RestXRestaurantManagementContext : Microsoft.EntityFramewor
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Payment__Payment__1758727B");
         });
+        modelBuilder.Entity<PaymentTransaction>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_PaymentTransaction");
+
+            entity.ToTable("PaymentTransaction");
+
+            entity.Property(e => e.Id).ValueGeneratedNever(); // consistent with project
+            entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.TransactionTime).HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.Bank).HasMaxLength(100);
+            entity.Property(e => e.CustomerName).HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.RawData).HasColumnType("nvarchar(max)");
+
+            entity.HasOne(d => d.Payment).WithMany()
+                .HasForeignKey(d => d.PaymentId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_PaymentTransaction_Payment_PaymentId");
+
+            entity.HasIndex(e => e.PaymentId, "IX_PaymentTransaction_PaymentId");
+        });
+
 
         modelBuilder.Entity<PaymentMethod>(entity =>
         {
