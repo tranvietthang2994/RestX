@@ -73,9 +73,15 @@ namespace RestX.UI.Controllers
                 _logger.LogInformation("Loading menu for owner: {OwnerId}, table: {TableId} with cart preservation", ownerId, tableId);
 
                 // Save cart to TempData to preserve it when returning from Cart page
-                if (!string.IsNullOrEmpty(DishListJson))
+                // Only preserve if cart is not empty
+                if (!string.IsNullOrEmpty(DishListJson) && DishListJson != "[]" && DishListJson != "{}")
                 {
                     TempData["PreservedCart"] = DishListJson;
+                }
+                else
+                {
+                    // Clear preserved cart if empty
+                    TempData.Remove("PreservedCart");
                 }
 
                 return RedirectToAction("Index", new { ownerId, tableId });

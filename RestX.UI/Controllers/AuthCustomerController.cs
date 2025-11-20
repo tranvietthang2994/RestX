@@ -135,6 +135,11 @@ namespace RestX.UI.Controllers
                 HttpContext.Session.Remove("CustomerName");
                 HttpContext.Session.Remove("CustomerPhone");
 
+                // Clear cart-related TempData
+                TempData.Remove("PendingCheckout");
+                TempData.Remove("PreservedCart");
+                TempData.Remove("tempModel");
+
                 _logger.LogInformation("Customer logout: {CustomerName}", customerName);
 
                 TempData["Message"] = "You have been logged out successfully.";
@@ -176,6 +181,11 @@ namespace RestX.UI.Controllers
                 HttpContext.Session.Remove("CustomerId");
                 HttpContext.Session.Remove("CustomerName");
                 HttpContext.Session.Remove("CustomerPhone");
+
+                // Clear cart-related TempData
+                TempData.Remove("PendingCheckout");
+                TempData.Remove("PreservedCart");
+                TempData.Remove("tempModel");
 
                 _logger.LogInformation("Customer logout: {CustomerName}", customerName);
 

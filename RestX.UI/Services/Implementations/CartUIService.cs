@@ -185,14 +185,14 @@ namespace RestX.UI.Services.Implementations
             try
             {
                 _logger.LogInformation("Clearing cart - Owner: {OwnerId}, Table: {TableId}", ownerId, tableId);
-                
-                var result = await _apiService.DeleteAsync($"api/cart/{ownerId}/{tableId}");
-                
+
+                var result = await _apiService.DeleteAsync($"api/cart/{ownerId}/table/{tableId}");
+
                 if (!result)
                 {
                     _logger.LogWarning("Failed to clear cart - Owner: {OwnerId}, Table: {TableId}", ownerId, tableId);
                 }
-                
+
                 return result;
             }
             catch (Exception ex)
