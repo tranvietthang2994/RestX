@@ -30,7 +30,7 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IDishManagementService, DishManagementService>();
 builder.Services.AddScoped<IFileService, FileService>();
 
-builder.Services.AddAutoMapper(typeof(Program));
+//builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddDbContext<RestXRestaurantManagementContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("RestX"),

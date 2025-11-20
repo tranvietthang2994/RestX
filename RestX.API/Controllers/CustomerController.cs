@@ -24,16 +24,37 @@ namespace RestX.API.Controllers
         /// </summary>
         /// <returns>Danh sách khách hàng</returns>
         [HttpGet]
-        public async Task<IActionResult> GetCustomers()
+        public async Task<IActionResult> GetCustomers(Guid ownerId)
         {
             try
             {
-                var customers = await customerService.GetCustomersByOwnerIdAsync();
+                var customers = await customerService.GetCustomersByOwnerIdAsync(ownerId);
                 return Ok(new { success = true, data = customers });
             }
             catch (Exception ex)
             {
                 this.exceptionHandler.RaiseException(ex, "An error occurred while loading customers.");
+                return StatusCode(500, new { success = false, message = "Internal server error" });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách khách hàng theo Owner ID từ URL parameter
+        /// </summary>
+        /// <param name="ownerId">Owner ID</param>
+        /// <returns>Danh sách khách hàng</returns>
+        [HttpGet("owner/{ownerId:guid}")]
+        public async Task<IActionResult> GetCustomersByOwnerId(Guid ownerId)
+        {
+            try
+            {
+                // Bạn cần thêm method này vào ICustomerService và CustomerService
+                var customers = await customerService.GetCustomersByOwnerIdAsync(ownerId);
+                return Ok(new { success = true, data = customers });
+            }
+            catch (Exception ex)
+            {
+                this.exceptionHandler.RaiseException(ex, $"An error occurred while loading customers for owner {ownerId}.");
                 return StatusCode(500, new { success = false, message = "Internal server error" });
             }
         }
@@ -150,7 +171,7 @@ namespace RestX.API.Controllers
         /// <param name="phone">Số điện thoại</param>
         /// <returns>Danh sách khách hàng</returns>
         [HttpGet("search")]
-        public async Task<IActionResult> SearchCustomerByPhone([FromQuery] string phone)
+        public async Task<IActionResult> SearchCustomerByPhone([FromQuery] string phone, Guid ownerId)
         {
             try
             {
@@ -158,7 +179,7 @@ namespace RestX.API.Controllers
                     return BadRequest(new { success = false, message = "Phone number is required" });
 
                 // Note: Might need to implement search method in CustomerService
-                var customers = await customerService.GetCustomersByOwnerIdAsync();
+                var customers = await customerService.GetCustomersByOwnerIdAsync(ownerId);
                 var filteredCustomers = customers.Where(c => 
                     c.Phone != null && c.Phone.Contains(phone, StringComparison.OrdinalIgnoreCase)).ToList();
 

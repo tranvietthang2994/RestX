@@ -17,9 +17,9 @@ namespace RestX.UI.Models.ViewModels
     public class CategoryViewModel
     {
         public int Id { get; set; }
-        public string CategoryName { get; set; } = string.Empty;
+        public string CategoryName { get; set; }
         public List<DishViewModel> Dishes { get; set; } = new();
-        public bool IsActive { get; set; } = true;
+        public bool IsActive { get; set; } 
     }
 
     public class DishViewModel

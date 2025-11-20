@@ -14,10 +14,12 @@ namespace RestX.API.Controllers
     {
 
         private readonly IHomeService _homeService;
+        private readonly ILogger<HomeController> _logger;
 
-        public HomeController(IHomeService homeService)
+        public HomeController(IHomeService homeService, ILogger<HomeController> logger)
         {
             _homeService = homeService;
+            _logger = logger;
         }
 
         /// <summary>
@@ -33,19 +35,38 @@ namespace RestX.API.Controllers
         {
             try
             {
+                _logger.LogInformation("HomeController.Index called with ownerId: {OwnerId}, tableId: {TableId}", ownerId, tableId);
+                
+                // Set RestaurantContext in HttpContext.Items so BaseService can access it
+                var restaurantContext = new RestX.API.Models.Entities.RestaurantContext
+                {
+                    OwnerId = ownerId,
+                    TableId = tableId
+                };
+                HttpContext.Items["RestaurantContext"] = restaurantContext;
+                _logger.LogDebug("RestaurantContext set: OwnerId={OwnerId}, TableId={TableId}", ownerId, tableId);
 
                 var viewModel = await _homeService.GetHomeViewsAsync(cancellationToken);
                 if (viewModel == null)
                 {
+                    _logger.LogWarning("HomeService returned null for ownerId: {OwnerId}, tableId: {TableId}", ownerId, tableId);
                     return NotFound("Không tìm thấy thông tin nhà hàng.");
                 }
 
+                _logger.LogInformation("HomeController.Index completed successfully for ownerId: {OwnerId}, tableId: {TableId}", ownerId, tableId);
                 return Ok(new { success = true, data = viewModel });
 
             }
             catch (Exception ex)
             {
-                return StatusCode(500, "An error occurred while processing your request.");
+                _logger.LogError(ex, "Error in HomeController.Index for ownerId: {OwnerId}, tableId: {TableId}. Exception: {ExceptionMessage}", 
+                    ownerId, tableId, ex.Message);
+                return StatusCode(500, new { 
+                    success = false, 
+                    message = "An error occurred while processing your request.",
+                    error = ex.Message,
+                    stackTrace = ex.StackTrace
+                });
             }
         }
     }

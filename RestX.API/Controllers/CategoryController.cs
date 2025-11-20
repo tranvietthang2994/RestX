@@ -8,7 +8,7 @@ namespace RestX.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Owner,Staff")] // Only Owner and Staff can manage categories
+    //[Authorize(Roles = "Owner,Staff")] // Only Owner and Staff can manage categories
     public class CategoryController : ControllerBase
     {
         private readonly ICategoryService categoryService;

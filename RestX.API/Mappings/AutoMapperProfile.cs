@@ -26,6 +26,12 @@ namespace RestX.API.Mappings
                 .ForMember(dest => dest.ModifiedDate, opt => opt.Ignore());
 
             // Add more mappings as needed
+
+            CreateMap<CustomerViewModel, Customer>().ReverseMap();
+            CreateMap<OwnerProfileViewModel, Owner>().ReverseMap();
+            CreateMap<Table, TableViewModel>().ReverseMap();
+
+
         }
     }
 }
