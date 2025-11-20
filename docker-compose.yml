@@ -27,7 +27,7 @@ services:
     restart: always
     environment:
       - ConnectionStrings__RestX=Server=db,1433;Database=RestX_RestaurantManagement;User Id=sa;Password=MatKhauManh!2025;TrustServerCertificate=True;
-      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_ENVIRONMENT=Development
     ports:
       - "5000:8080" # API sẽ chạy ở cổng 5000 của VPS
     depends_on:
@@ -47,7 +47,7 @@ services:
       - ConnectionStrings__RestX=Server=db,1433;Database=RestX_RestaurantManagement;User Id=sa;Password=MatKhauManh!2025;TrustServerCertificate=True;
       # UI gọi API qua tên service 'api'
       - ApiSettings__BaseUrl=http://api:8080
-      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_ENVIRONMENT=Development
     ports:
       - "80:8080" # Web chính chạy ở cổng 80 (http mặc định)
     depends_on:
