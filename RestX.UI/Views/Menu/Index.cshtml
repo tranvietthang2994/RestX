@@ -346,12 +346,13 @@
                 updateCartValue();
 
                 // Chuẩn bị cho cart
+                const dishImgSrc = btn.parentElement.firstElementChild.src || "";
                 cart.push({
                     DishId: Number(btn.parentElement.getAttribute("dish-id")),
                     DishName: btn.parentElement.firstElementChild.alt,
                     Quantity: Number(1),
                     Price: parseCurrencyString(btn.previousElementSibling.lastElementChild.textContent),
-                    ImgUrl: btn.parentElement.firstElementChild.src,
+                    ImgUrl: dishImgSrc,
                 });
                 jsonData.value = JSON.stringify(cart);
             });
@@ -440,6 +441,9 @@
         } else {
             const newImg = document.createElement("img");
             newImg.className = "pe-1";
+            if (srcImg && srcImg.trim() !== "") {
+                newImg.src = srcImg;
+            }
             newImg.alt = altImg;
             OrderList.prepend(newImg);
 
