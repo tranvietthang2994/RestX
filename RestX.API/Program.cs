@@ -404,9 +404,16 @@ builder.Services.Configure<FormOptions>(options =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
-        policy.AllowAnyOrigin()
-              .AllowAnyHeader()
-              .AllowAnyMethod());
+    {
+        policy
+            .WithOrigins(
+                "http://160.250.5.94",
+                "http://160.250.5.94:5000"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
 });
 
 var app = builder.Build();
