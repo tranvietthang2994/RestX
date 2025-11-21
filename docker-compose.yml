@@ -18,6 +18,8 @@ services:
 
   api:
     image: tranvietthangdev/restx-api:latest
+    env_file:
+      - .env
     container_name: restx_api
     restart: always
     environment:
