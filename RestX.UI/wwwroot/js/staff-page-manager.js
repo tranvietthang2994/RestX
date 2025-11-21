@@ -934,7 +934,9 @@ window.StaffPageManager = (function () {
 
                     // Redirect to PayOS checkout page
                     console.log("Redirecting to PayOS checkout URL:", result.data.checkoutUrl);
-                    window.open(result.data.checkoutUrl, '_blank');
+                    //window.open(result.data.checkoutUrl, '_blank');
+                    window.location.href = result.data.checkoutUrl;
+
 
                     // Start polling payment status in background
                     startPaymentStatusPolling(result.data.orderCode, orderId);
