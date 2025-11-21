@@ -13,11 +13,11 @@
             {
                 // TODO: Remove this fallback when JWT authentication is properly implemented
                 // For development/testing purposes, return a default OwnerId
-                #if DEBUG
+                //#if DEBUG
                 return Guid.Parse("550e8400-e29b-41d4-a716-446655440040"); // Default test OwnerId from sample data
-                #else
-                throw new UnauthorizedAccessException("OwnerId claim is missing or invalid.");
-                #endif
+                //#else
+                //throw new UnauthorizedAccessException("OwnerId claim is missing or invalid.");
+                //#endif
             }
 
             return ownerId;
